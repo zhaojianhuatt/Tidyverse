@@ -1,0 +1,3939 @@
+---
+title: "Tidyverse自学笔记"
+author: "ZJH"
+date: 2022年3月22日至`r format(Sys.time(), '%Y年%m月%d日')`
+CJKmainfont: Microsoft YaHei
+geometry: "left = 3.0cm, right = 3.0cm, top = 2.0cm, bottom = 2.0cm"
+output: 
+  html_document: 
+    toc: yes
+    toc_float: true
+    toc_depth: 4
+    fontsize: 8pt
+    theme: cosmo
+    highlight: tango
+  word_document: 
+    toc: yes
+  pdf_document: 
+    latex_engine: xelatex
+    toc: yes
+    toc_depth: 4
+    highlight: tango
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+
+<font face="黑体" size=10 color=blue><center>**Tidyverse自学笔记**</center></font>
+
+
+![](D:/Rwd/Tidyverse study note/Tidyverse.png)    
+
+# 1. Tidyverse简介
+
+Tidyverse是由R语言大神Hadley Wickham开发的一系列用于数据科学的R语言包集合，所有包共享底层设计和语法。包括的包主要有ggplot2，dplyr，tidyr，readr，purrr，tibble，stringr,forcats。  
+
+Tidyverse涵盖了数据科学的整个工作流程。即数据导入、数据清洗、数据变换、数据可视化、数据建模以及文档沟通。
+[<sup>1-3</sup>](#refer-anchor)
+
+1、数据科学  
+ggplot：数据可视化。    
+dplyr：数据操作。    
+tidyr：数据清洗。整洁数据的标准：每一列是一个变量，每一行为一个观测。    
+purrr：函数化编程。    
+tibble：对数据框重构。    
+stringr：处理字符串。    
+hms：处理时间数据。    
+lubridate：处理日期时间。    
+modelr：用于管道内建模。    
+broom：模型简洁化。    
+
+2、数据读取  
+readr：读入csv、tsv和fwf文件。    
+readxl：读入.xls和.xlsx数据。  
+haven：读入SAS、SPSS、Stata等外部数据。  
+httr：与web交互的APIs。  
+rvest：网页爬虫。  
+xml2：读入XML文件。  
+DBI：读取关系型数据库。  
+feather：用于与Python及其他语言共享。  
+
+3、R开发
+devtools：开发 R包。  
+roxygen2：生成内联（in-line）文档。  
+testthat：单元测试。  
+pkgdown：创建美观的包网页。  
+
+**数据准备**  
+
+本示例数据是自编数据，仅为练习所用，数据结构假设为，两个年份year(2020，2021)，两个氮水平nitrogen（N1，N2），两个玉米品种variety（a，b）测定了5个试验指标（变量v1，v2，v3，v4，v5），每个处理3次重复block（1，2，3）。
+
+```{r}
+library(tidyverse) # 调用tidyverse。
+df <- read_csv(file = "df.csv") # 导入数据。文档在工作目录下，所以直接给文件名导入。
+df # 查看数据。
+data1 <- read_csv(file = "data1.csv") # 导入数据。文档在工作目录下，所以直接给文件名导入。
+data1 # 查看数据。
+```
+
+
+<font face="黑体" size = 8 color = brown><center>**第一部分 基础知识篇**</center></font>
+
+# 2. 基础知识  
+
+## 2.1 R语言代码风格规定  
+
+### 2.1.1 文件命名  
+
+文件名：不要有特殊字符和空格，建议用小写；  
+变量名：推荐方式为小写字母命名，可用_或者.来连接，如varible.name，也接受小写起始接着大写的形式，如varibleName；  
+函数名：推荐首字母大写而不用点，在命名时应避免与R内置的函数名重复；  
+   
+### 2.1.2  代码书写规范 
+
+- 赋值符号用<-，快捷键：Alt + - ；赋值符号前后一定要有空格，a <- b，b赋值给a；  
+- 在函数中进行参数传递时用=；    
+- 逗号后一定要空一格，a, b；  
+- 不要在方括号或圆括号中的代码两侧加入空格；  
+- 在+, -, >, =等运算符前后要有空格，a + b，a加b；  
+- 函数括号前后不要有空格；select(a, b)；  
+- 每行代码最长不超过80个字符，可在Rstudio中通过 Tools > Global Options > Code > Display 然后勾选 Show margin显示80个字符宽度的边界线；要换行时在逗号后进行换行，函数参数尽可能竖直方向对齐。  
+- ggplot2每个图层的语句要单独一行，缩进两个空格，+ 位于一行的末尾；dplyr的每个函数要单独一行，缩进两个空格，管道符号 %>% 位于末尾；  
+- 代码注释，#后面要有一个空格；行内短注释应在代码后接两个空格， #， 再接一个空格。如果注释很长，可考虑多换几次行；  
+
+## 2.2 管道
+
+管道操作的出发点是帮助你以清晰易懂的方式编写代码。管道的工作原理就是进行"词法变换"。R中的管道操作符包括`%>%`，`%T>%`，`%<>%`和`%$%`，分别实现不同功能，它们均来自于magrittr工具包。tidyverse中的所有包都会自动加载`%>%`，因此一般不用显式加载magrittr。 [<sup>8</sup>](#refer-anchor)
+
+### 2.2.1 %>%
+
+`%>%`：向右操作符，传导作用，即将管道符左侧的输出结果传导给管道符右侧，可连续传导。
+
+```{r}
+library(tidyverse) # 加载tidyverse。
+df %>%
+  filter(nitrogen == "N1") %>%
+  select(v2) %>%
+  plot() # df数据集传导给filter选取nitrogen为N1的行，再传导给select选择v2，再传导给plot绘图。
+df %>%
+  group_by(nitrogen) %>%
+  summarise(v1.1 = mean(v1)) %>%
+  ggplot(aes(x = nitrogen, y = v1.1)) +
+  geom_col() # df数据集以nitrogen进行分组对v1求平均值，平均值结果列名为v1.1，再传导给ggplot绘制柱状图。
+```
+
+注意：`%>%`默认左边的结果传导给右边函数的第一个参数，当管道符左边表达式的结果不作为右边表达式函数的第一个参数时，需要用magrittr里占位符.指定参数。个人理解，占位符"."就是`%>%`左边结果表达式的一个代表符号。
+
+```{r}
+df %>% boxplot(v1 ~ nitrogen, data = .) # 对df数据集v1按分组进行箱图绘制， boxplot函数绘制分组图的形式boxplot(formula,data)，formula是第一个参数，形式为数值变量~分组变量，data位于第二个参数，因此需要通过占位符来指定数据集。
+```
+
+### 2.2.2 %T>%
+
+`%T>%`：向左操作符，接受符号左面的输出结果，但不会把输出结果传给符号右边，相当于停顿了，后面依然可用`%>%`。
+
+```{r}
+df %>%
+  select(v1, v2) %T>% select(v2) %>%
+  cor() # df传导给select选择了v1和v2列，接下来%T>%停顿传导，最终cor求算了v1和v2列的相关系数。
+```
+
+### 2.2.3 %$%
+
+`%$%`：解释操作符，左侧数据的属性名传给右侧，让右侧的调用函数直接通过名字，就可以获取左侧的数据。
+
+```{r}
+library(magrittr) # 调用magrittr包。
+df %$% plot(v2) # df数据集传导给plot，这时右边的plot可以直接选取列v2了。
+```
+
+### 2.2.4 %<>%
+
+`%<>%`：复合赋值操作符，把结果写回到最左侧的对象（覆盖原来的值）。
+
+```{r}
+df2 <- df # 因为要覆盖赋值，为不破环df数据集，先新建一个数据集df2。
+df2 # 查看数据集df2。
+df2 %<>% filter(nitrogen == "N1") %>% select(v2) # df2数据集传导通过filter选择nitrogen为N1的行，再传导用select选择v2列。
+df2 # 再次查看数据集df2。数据集变化了。
+```
+
+注：`%<>%`必须要用在第一个管道的对象处，才能完成赋值的操作。
+
+### 2.2.5 |>
+
+在R 4.1.0 以上版本中，R新增了内置管道符`|>`，其特点在于无需调用任何包就可实现`%>%`的功能。作用与`%>%`基本一致。但目前还不支持占位符[<sup>9</sup>](#refer-anchor)。  
+
+不用管道的操作
+
+```{r}
+hist(apply(df[5:8], 2, mean)) # 提取df数据集5到8列，用apply求每列的平均值，再绘图。
+```
+
+用内置管道操作
+
+```{r}
+df[5:8] |>
+  apply(2, mean) |>
+  hist() # 内置管道对df数据集5到8列数据求平均值后绘图。
+```
+
+后记：
+
+-   管道确实提供了更为简洁，优雅，易读的代码书写方式。
+
+-   管道的使用要深刻理解符号左右两边代表的意义，这要求自己对数据要非常熟悉，且要让数据的操作流程在脑海中格外明晰。  
+
+<font face="黑体" size = 8 color = brown><center>**第二部分 数据处理篇**</center></font>
+
+# 3. 数据读写
+
+## 3.1 数据读取
+
+<font size=5 color=red>Base R</font>  
+
+read.table()和read.csv()。
+
+```{r}
+read.table("D:/Rwd/df.csv", header = T, sep = ",") # R基础函数读取csv文件。
+read.csv("df.csv") # read.csv读取csv文件，默认分隔符","，head为TRUE。
+```
+
+*注：要是文件在工作目录下，可直接输入文件名读取，若不在工作目录下，需完整输入文件存放路径，获取工作目录的命令为getwd()。*
+
+**readr包读取**
+
+read_*函数
+
+read_csv()：读取逗号分隔文件。
+read_csv2()：读取分号分隔文件。
+read_tsv()：读取制表符分隔文件。
+read_delim()：读取使用任意分隔符的文件。
+read_fwf()：读取固定宽度的文件。
+read_table()：读取固定宽度文件的变体，使用空白字符来分隔各列。
+read_log()：读取Apache风格的日志文件。
+
+读取.csv的read_csv()函数。
+read_csv(file, col_names = TRUE, col_types = NULL, col_select = NULL, id
+= NULL, locale = default_locale(), na = c("", "NA"), quoted_na = TRUE,
+quote = """, comment = "", trim_ws = TRUE, skip = 0, n_max = Inf,
+guess_max = min(1000, n_max), name_repair = "unique", num_threads =
+readr_threads(), progress = show_progress(), show_col_types =
+should_show_types(), skip_empty_rows = TRUE, lazy = TRUE)
+
+参数详解：
+
+-   file：数据文件的相对路径或绝对路径，也可以是一个行内csv文件。
+对于以 .gz, .bz2, .xz, 或者.zip 为后缀的文件会被自动解压，对于以 http://, https://, ftp://, 或 ftps:// 开头的文件会被自动下载。  
+-   col_names = TRUE：默认使用读入数据的第一行作为列名。当FALSE时，第一行不作为列名。可以设置一个向量作为列名。
+-   col_types =NULL：列类型设置，按前1000行数据猜测。也可手动输入一个list()设置列的类型，类型简写：c = character(字符型)，i = integer(整数型)，n = number(数值型)，d = double(浮点型)，l = logical(逻辑型)，f = factor(因子型)，D = date(日期型)，T = date time(日期时间型)，t = time(时间型)，? = guess(猜测该列类型)，_or- = skip(跳过该列)。
+-   col_select = NULL：选择读入的列，默认读入全部列。可以通过索引或列名进行选择列，两列以上使用c()或list()。
+-   id = NULL：无新增的列。可以设置为一个字符串，作为新增一列的列名，该列用于储存文件路径。对于读入多个文件数据或路径中有可用信息的场景比较有用。
+-   locale =default_locale()：默认使用US-centric的默认值。可以自己设置。
+-   na = c("","NA")：默认读入数据中空白和NA表示缺失值。设定使用哪个或哪些值来表示文件中的缺失值。
+-   quoted_na = TRUE：用quote包围的缺失值被看作缺失值。设置为FALSE时，quote包围的缺失值被看作字符串。不过stringr2.0版本中该参数被弃用。
+-   quote = """：设置制定包围字符型数据的字符为双引号"。
+-   comment =""：设置注释的格式（在读入数据时，注释一律忽略）。如，可以设置comment="#"来丢弃所有以#开头的行。
+-   trim_ws = TRUE：在分析每块数据之前，从每个字段中修剪引导和尾随空白（默认空格和制表符）。
+-   skip = 0：默认数据全部读入。可以设置为任意数字，表示读取数据时跳过前几行。
+-   n_max = Inf：设置最大读入行数，默认为无穷大。如n_max=5，表示读取前5行。
+-   guess_max = min(1000,n_max)：与前面的col_types相呼应，表示用来猜测列的类型的最大行数，默认为1000。
+-   name_repair ="unique"：默认保证列名独一无二且非空。不同的值有不同的含义，其他可传递的参数值如下："minimal"不对空列名进行填充，也不检查是否有重复列名；"check_unique"对空列名不进行填充，但是保证独一无二；"universal":使名字独一无二且符合语法。
+-   num_threads =readr_threads()：分析和读取数据使用的线程数与readr包一致。
+-   progress =show_progress()：是否显示进度与readr包的设置一致。可以设置readr.show_progress为FALSE来阻止进度显示。
+-   show_col_types =should_show_types()：是否显示列的类型与readr包的设置一致。
+-   skip_empty_rows =TRUE：默认空行会被跳过。如果设置为FALSE，空行会以各列均为NA的行为被读取并显示。
+-   lazy = TRUE：在windows上运行的时候，会锁定该文件直到数据读取结束，如果出现相关问题可以设置为FALSE。
+
+```{r}
+library(tidyverse) # 调用tidyverse。
+read_csv("D:/Rwd/df.csv") # 读取数据df.csv。
+read_csv("df.csv", col_select = 5:8) # 读取df数据集5：8列。
+read_csv("df.csv", n_max = 12) # 选择前12行导入。
+```
+
+<font size=5 color=red>tidyverse中readxl包读取</font>
+
+readxl包专门用于读取excel文件。read_excel()函数可自动检测 xls 或 xlsx
+文件。
+
+read_excel(path, sheet = NULL, range = NULL, col_names = TRUE, col_types= NULL, na = "", trim_ws = TRUE, skip = 0, n_max = Inf, guess_max =min(1000, n_max), progress = readxl_progress(), .name_repair = "unique")
+
+read_excel，read_xls，read_xlsx函数参数一样。
+
+参数详解
+
+-   path：数据路径。
+-   sheet：用于指定要读取excel文件工作表。
+-   range：指定读取数据的范围。
+-   col_names：指定列名，默认使用第1行作为列名。可通过向量指定列名。
+-   col_types：指定列类型。
+
+```{r}
+library(readxl) # 调用readxl包。
+df1 <- read_excel("df1.xlsx") # read_excel读取excel文件。
+read_excel("df1.xlsx", sheet = 1) # 通过指定sheet号读取sheet文件。
+read_excel("df1.xlsx", range = cell_cols("E:G")) # range指定了读取的范围，这里读取的是E到g列。
+read_excel("df1.xlsx", n_max = 12) # n_max选择指定行，这里读取的是前12行。
+```
+
+## 3.2 数据写出
+
+write*系列函数
+写出数据到文件：write_csv(), write_tsv(), write_csv2(), write_tsv2()
+
+write_csv(x, file, na = "NA", append = FALSE, col_names = !append, quote= c("needed", "all", "none"), escape = c("double", "backslash", "none"),eol = "n", num_threads = readr_threads(), progress = show_progress(),path = deprecated(), quote_escape = deprecated())
+
+-   x：待写出文件的数据，格式为一个数据框或一个tibble。
+-   file：写出文件的文件名或链接。
+-   na = "NA"：缺失值默认填充NA。可以设置为其他字符。
+-   append =FALSE：默认写入文件的方式为覆盖式写入。需要续写入文件则设置为TRUE。
+-   col_names =!append：若覆盖式写入，则写入列名；若续写入文件，则不写入列名。可以手动设置是否写入列名。
+-   eol = "n"：行末默认使用换行符。 [<sup>4-6</sup>](#refer-anchor)
+
+```{r}
+library(readr) # 调用readr包。
+write_csv(df1, "df2.csv") # 将数据集df1写出到工作目录保存为csv文件，命名df2。
+```
+
+最后，读取数据的包很多，函数很多，涉及的参数也很多，记住常用的就好。
+另外，个人认为，记不住代码可以试一试Rstudio数据导入，操作简便，且是交互式的，方法如下：点击Environment下Import Dataset，菜单提供了base，readr包，excel来源的数据读取选择项，选择后会跳出设置界面，设置项包括数据读取路径，读取参数。还提供了数据和代码的预览。
+
+## 3.3 data.frame与tibble
+
+tibble是一种简单数据框，它对传统数据框的功能进行了一些修改，以便更易于使用。
+tibble不能改变输入的类型（例如，不能将字符串转换为因子）、变量的名称，也不能创建行名称。可以在tibble中使用在R中无效的变量名称（即不符合语法的名称）作为列名称。要引用这样的变量，需要使用反引号
+将它们括起来。
+
+```{r}
+d1 <- data.frame(x = 1:5, y = LETTERS[1:5]) # 创建data.frame。
+d1 # 返回数据框d1。
+str(d1) # d1数据结构查看。
+d1 <- as_tibble(d1) # 将d1转为tibble。
+d1 # 返回转化结果。
+glimpse(d1) # tibble数据结构查看。
+d1 <- as.data.frame(d1) # 将tibble转为data.frame。
+d1 # 返回转化结果。
+d1[[2]] # 索引d1第2列。
+d1$y # 索引d1数据集y列。
+add_column(d1, z = letters[1:5]) # 增加列。
+add_row(d1, x = 6, y = "F") # 增加行。
+tibble(x = 1:5, "/" = LETTERS[1:5]) # 创建tibble。相比较data.frame，tibble只要通过''就可以随意创建想要的列名。
+tribble(~x, ~y, 1, "A", 2, "B", 3, "C", 4, "D", 5, "E") # tribble创建tibble。
+```
+
+data.frame和tibble的区别
+打印：
+data.frame全部数据被打印，不打印列类型。适合小数据集，大数据集占屏幕。
+tibble的打印只显示前
+10行结果，并且列也是适合屏幕的，这种方式非常适合大数据集。还会打印出列的类型。
+提取：
+两者共同点为，[[可以按名称或位置提取变量；$只能按名称提取变量，但tibble可减少输入。
+
+
+# 4.数据连接
+
+## 4.1 行列合并
+
+合并行：前提条件为列名相同，否则作为新列（NA填充），原数据下方堆叠新行，规则是根据列名匹配；tidyverse中函数为bind_row()。
+合并列：前提条件为行数相同，原数据右侧拼接新列，规则为根据位置匹配行。tidyverse中函数为bind_cols()。
+
+### 4.1.1 按行合并数据
+
+先创建示例数据集。
+
+```{r}
+df # 查看数据集。
+df_br1 <- df[1:5, ] # 取df数据1到5行作为行合并数据br1。
+df_br1 # 查看数据集df_br1。
+df_br2 <- df[12:16, ] # 取df数据12到18行作为行合并数据br2。
+df_br2 # 查看数据集df_br2。
+```
+
+<font size=5 color=red>Base R</font>
+
+在R基础包中通过rbind()实现。
+
+```{r}
+rbind(df_br1, df_br2) # 行合并。
+merge(df_br1, df_br2, all = T) # merge函数行合并。
+```
+
+<font color=grey>*注：merge(x, y, by = intersect(names(x), names(y)), by.x = by, by.y = by, all = FALSE, all.x = all, all.y = all, sort = TRUE, suffixes = c(".x",".y"), incomparables = NULL, ...)
+x,y：指定合并的两个数据框；
+by,by.x,by.y：指定依据哪些行合并数据框，默认值为相同列名的列；
+all,all.x,all.y：指定x和y的行是否应该全在输出文件中；
+sort：by指定的列是否要排序；  suffixes：指定除by外相同列名的后缀；
+incomparables：指定by中哪些单元不进行合并。*</font>
+
+<font size=5 color=red>tidyverse</font>
+
+```{r}
+library(tidyverse) # 调用tidyverse。
+bind_rows(df_br1, df_br2) # 合并行数据。
+```
+
+### 4.1.2 按列合并数据
+
+创建示例数据集。
+
+```{r}
+df_bc1 <- df[, 1:5] # 取df数据1到5列作为列合并数据bc1。
+df_bc1 # 查看数据集df_bc1。
+df_bc2 <- df[, 6:8] # 取df数据6到8列作为列合并数据bc2。
+df_bc2 # 查看数据集df_bc2。
+```
+
+<font size=5 color=red>Base R</font>
+基础包中的cbind()函数可实现列数据连接。
+
+```{r}
+cbind(df_bc1, df_bc2) # cbind合并df_bc1和df_bc2，cbind是直接列合并。
+data.frame(df_bc1, df_bc2) # 通过data.frame重新构建数据框来合并。
+df_bc3 <- df[, 1:6] # 取df数据6到8列作为列合并数据bc3。
+df_bc3 # 查看数据集df_bc3。
+merge(df_bc1, df_bc3) # merge函数合并df_bc1和df_bc3，merge函数是通过公共列进行合并。
+```
+
+<font size=5 color=red>tidyverse</font>
+
+```{r}
+bind_cols(df_bc1, df_bc2) # 合并列数据。
+```
+
+## 4.2 值匹配合并
+
+左连接、右连接、全连接、内连接、半连接、反连接，前四种连接又称为修改连接，后两种连接又称为过滤连接。函数如下：
+left_join(x, y, by) 保留 x 所有行，合并匹配的 y 中的列。
+right_join(x, y, by) 保留 y 所有行，合并匹配的 x 中的列。
+full_join(x, y, by) 保留 x 和 y 中的所有行，合并匹配的列。
+inner_join(x, y, by) 保留两个数据表中所共有的观测：只保留 x 中与
+y匹配的行，合并匹配的 y 中的列。
+semi_join(x, y, by) 根据在 y 中，来筛选 x 中的行。
+anti_join(x, y, by) 根据不在 y 中，来筛选 x 中的行。
+
+```{r}
+df_s1 <- tibble(year = c("2009", "2010", "2011"), nitrogen = c("120", "240", "360")) # 构建数据集df_s1。
+df_s1 # 查看数据集df_s1。
+df_s2 <- tibble(year = c("2009", "2010", "2012"), irrigation = c("100", "200", "300")) # 构建数据集df_s2。
+df_s2 # 查看数据集df_s2。
+```
+
+```{r}
+left_join(df_s1, df_s2, by = "year") # 左连接。保留了df_s1的所有行，将df_s2的irrigation列引并入df_s1，因为df_s2没有2011年行，所以对应2011的irrigation值为NA。
+right_join(df_s1, df_s2, by = "year") # 右连接。保留了df_s2的所有行，将df_s1的nitrogen列并入df_s2，因为df_s1没有2012年行，所以对应2012的nitrogen值为NA。
+full_join(df_s1, df_s2, by = "year") # 全连接。保留了df_s1和df_s2的所有行，将df_s1的nitrogen列和df_s2的irrigation列合并入新数据集，因为df_s1没有2012年行，所以对应2012的nitrogen值为NA，因为df_s2没有2011年行，所以对应2011的irrigation值为NA。
+inner_join(df_s1, df_s2, by = "year") # 内连接。保留了df_s1和df_s2的公共的行，将df_s1的nitrogen列和df_s2的irrigation列合并入新数据集，列值也是按公共行的值保留。
+semi_join(df_s1, df_s2, by = "year") # 半连接。连接条件为year，连接时依据条件保留了df_s1在df_s2的公共部分。
+anti_join(df_s1, df_s2, by = "year") # 反连接。连接条件为year，连接时依据条件保留了df_s1不属于df_s2公共部分的部分。
+```
+
+# 5. 数据重塑
+
+## 5.1 认识长宽数据
+
+宽数据：每一行代表一个观测，每一列表示所观测到的变量。但是同一变量的多个水平的观测出现在多个列中。如下例中N1和N2分别占了一列，实际上N1和N2列的观测值是变量产量，而通过两列去呈现了。最终数据呈现为变量多，观测少。
+
+```{r}
+widerdata <- tibble(year = c("2020", "2021", "2022"), N1 = c(100, 120, 110), N2 = c(200, 240, 260)) # 宽数据。
+widerdata # 返回数据。
+```
+
+长数据：每一行代表一个观测，每一列表示所观测到的变量。变量的多个水平的观测出现在同一列中。如下例中N1和N2的观测值在同一列，变量产量在同一列呈现了。最终数据呈现为变量少，观测多。
+
+```{r}
+longerdata <- tibble(year = rep(c("2020", "2021", "2022"), each = 2), nitrogen = rep(c("N1", "N2"), 3), 产量 = c(100, 200, 120, 240, 110, 260)) # 长数据。
+longerdata # 返回长数据。
+```
+
+整洁数据：
+Each variable forms a column. 每个变量一列。
+Each observation forms a row. 每个观测一行。
+Each type of observational unit forms a table.
+每种类型的观测单元一张表。 [<sup>7</sup>](#refer-anchor)
+
+## 5.2 长宽数据转换
+
+### 5.2.1 reshape2包
+
+在reshape2包中melt可完成数据的宽格式向长格式的转化。
+
+**宽转长**
+melt(data, id.vars, measure.vars, variable.name = "variable", ..., na.rm
+= FALSE, value.name = "value", factorsAsStrings = TRUE)
+参数详解：
+
+-   data：要变换的数据框。
+-   id.vars：不需要进行melt的列名，通常会随着melt不停重复堆叠，因此最好为无数学意义整数（变量位置信息）或字符串（名称信息）。
+-   measure.vars：观测值列名。
+-   variable.name：melt 后观测变量的列名 ，不填默认为 variable。
+-   value.name：melt 后观测值的列名，不填默认为 value。
+
+```{r}
+library(reshape2) # 调用reshape2包。
+melt(widerdata, id.vars = "year", variable.name = "nitrogen", value.name = "yield") # melt函数进行宽变长。
+```
+
+**长转宽**
+dcast(data, formula, fun.aggregate = NULL, ..., margins = NULL, subset =
+NULL, fill = NULL, drop = TRUE, value.var = guess_value(data))
+参数详解：
+-   data：要变换的数据框。
+-   formula：形如x ~ y,x为行标签，y为列标签。
+-   fun.aggregate：聚合函数，对value值进行处理。
+-   margins：是否加上边际值。
+-   subset：对结果进行条件筛选。
+-   drop：是否保留缺失值。
+-   value.var：后面跟要处理的字段。
+
+```{r}
+dcast(longerdata, year ~ nitrogen) # 长数据转宽数据。
+```
+
+### 5.2.2 tidyr包
+
+**宽变长**
+
+pivot_longer()函数
+pivot_longer(data, cols, names_to = "name", names_prefix = NULL,
+names_sep = NULL, names_pattern = NULL, names_ptypes = NULL,
+names_transform = NULL, names_repair = "check_unique", values_to =
+"value", values_drop_na = FALSE, values_ptypes = NULL, values_transform
+= NULL, ...) 参数详解：
+
+-   data：要变换的数据框。
+-   cols：要变换的列的选择，通过选择列语法选择。
+-   names_to：指定存放变换列的新列名。
+-   values_to：指定存放变换列值的列名称。
+-   values_drop_na = FALSE：逻辑变量，是否忽略变换列中的NA。
+
+```{r}
+longerdata <- widerdata %>% pivot_longer(-year, names_to = "nitrogen", values_to = "yield") # 宽变长。
+longerdata # 返回长数据结果。
+```
+
+**长变宽**
+
+pivot_wider()函数，pivot_longer()的反向操作。
+pivot_wider( data, id_cols = NULL, id_expand = FALSE, names_from = name,
+names_prefix = "", names_sep = "_", names_glue = NULL, names_sort =
+FALSE, names_vary = "fastest", names_expand = FALSE, names_repair =
+"check_unique", values_from = value, values_fill = NULL, values_fn =
+NULL, unused_fn = NULL, ...)
+参数详解：
+
+-   data：要变换的数据框。
+-   id_cols：唯一识别观测的列，默认是除了names_from和values_from指定列之外的列。
+-   names_from：指定列名来自哪个变量列。
+-   values_from：指定列值来自哪个变量列。
+-   values_fill：若变宽后单元格缺失，设置用何值填充。
+
+```{r}
+longerdata %>% pivot_wider(names_from = nitrogen, values_from = "yield", values_fill = 0) # 长数据变宽数据。
+```
+
+### 5.2.3 gather和spread  
+
+gather()：列转行；  
+gather(data, key, value, … , na.rm = FALSE, convert = FALSE)  
+data：为待转换的宽数据。  
+key：将原数据框中的所有列赋给一个新变量key。  
+value：将原数据框中的所有值赋给一个新变量value。  
+...：可以指定哪些列聚到一列中 （同reshape2区别）。  
+na.rm：是否删除缺失值。  
+
+spread()：行转列。 
+spread(data, key, value, fill = NA, convert = FALSE, drop = TRUE)  
+data：待转换的长数据。  
+key：需要将变量值拓展为字段的变量。  
+value：需要分散的值。  
+fill：对于缺失值，可将fill的值赋值给被转型后的缺失值。[<sup>21</sup>](#refer-anchor)    
+
+```{r}
+widerdata # 宽数据。
+df1 <- widerdata %>% gather(-year, key = "N", value = "v") # 宽变长。
+df1 # 返回变化后的结果。
+df1 %>% spread(key = "N", value = "v") # 长变宽。
+```
+
+
+# 6 数据操作
+
+## 6.1 列操作
+
+### 6.1.1 列选择
+
+<font size=5 color=red>Base R</font>
+
+```{r}
+df[, 5] # 选择df数据集第5列。
+df[, c(1, 6)] # 选择df数据集第1和第6列。
+df[, 1:6] # 索引选择df数据1到6列。
+```
+
+<font size=5 color=red>tidyverse</font>
+select(.data, ...)
+.data：要选择列的数据框。
+...： 一个或者更多的要选择的列，列名不用加引号。
+
+1、基本选择
+选择列时，可以写列序号，也可以直接写列名。
+: 表示选择连续的若干列；
+! 表示选择变量集合的余集（反选）；
+& 和 | 表示选择变量集合的交或并；
+c() 表示合并多个选择。
+
+```{r}
+df %>% select(5) # select函数选择数据集df中第5列。
+df %>% select(1, 6) # 选择数据集第1和第6列。
+df %>% select(year, v2) # 通过指定列名选择，与上等同。
+df %>% select(1:6) # 选择连续的列，df数据集1到6列。
+df %>% select(year:block, v2:v5) # 选取不同连续列组合，这里选择了df数据集year到block，v2到v5的列组合为新数据集。
+df %>% select(!7) # 反选，选择除第7列以外的列。
+df %>% select(-7) # -也可以达到反选的目的，选择除第7列以外的列。
+df %>% select(1:4 | 7) # 选合集，选择1到4列和第7列。
+df %>% select(1:4 & 4:7) # 选交集，1到4列和4到7列的共同列是第4列，因此，选出列为第4列。
+df %>% select(c(4, 7)) # 选择第4和第7列。
+df %>% select(c(nitrogen, v3)) # 通过列名输入选择nitrogen和v3列。
+df %>% pull(v2) # pull函数类似于$，可以用于提取单列。
+```
+
+2、条件选择
+
+everything(): 选择所有列；
+last_col(): 选择最后一列，可以带参数，如本例中 last_col(3) 选择倒数第 4列。
+
+```{r}
+df %>% select(everything()) # 选择所有列。
+df %>% select(last_col()) # 选择最后1列。
+df %>% select(last_col(3)) # 选择倒数第4列。
+```
+
+starts_with(): 以某前缀开头的列名；
+ends_with(): 以某后缀结尾的列名；
+contains(): 包含某字符串的列名；
+matches(): 匹配正则表达式的列名；
+num_range(): 匹配数值范围的列名，如 num_range("x", 1:3) 匹配 x1, x2,x3。
+where(): 应用一个函数到所有列，选择返回结果为 TRUE 的列，比如与
+is.numeric 等函数连用。
+select_if: 通过条件判断选择列。
+
+```{r}
+df %>% select(starts_with("v")) # 选择列名首字母是v的列。
+df %>% select(ends_with("n")) # 选择列名结尾字母是n的列。
+df %>% select(contains("v")) # 选择列名包含字母v的列。
+df %>% select(matches("v.*")) # 选择列名中含v的列。
+df %>% select(num_range("v", 1:3)) # 列名中有v，且取值范围1到3。
+df %>% select(where(is.character)) # 选择列类型为字符型的列。
+df %>% select_if(is.character) # select_if函数判断数据类型来选择。
+df %>% select_if(~ !is.character(.)) # 反向取，这里取df数据集中除字符型列以外的列。
+df %>%
+  select_if(is.numeric) %>%
+  select_if(~ mean(., ) > 2) # 选择df数据集数值型列，且列平均值大于2的列。
+```
+
+### 6.1.2 列增减
+
+<font size=5 color=red>Base R</font>  
+
+通过搜索学习，学习到基础包中我认为可以增删列的方法：
+- 通过索引赋值增加列，通过反向索引来删除列；
+- 通过transform函数中对列的赋实现列的增删，赋NULL，删除列，赋具体的数字，增加列。
+- subset函数用于提取子集，只要我们提取了想要的子集，也相当于删除了不想要的列；
+- data.frame函数可以实现在原数据框基础上增加新列，构建新的数据框。
+- cbind函数用于连接数据框，可通过次函数将原数据框和含新列的数据框连接实现增加列。
+- 最后，我认为还有一个笨办法就是通过edit函数调出原始数据，通过数据录入增加列。   
+下面一一尝试一下。  
+1、索引增删列  
+```{r}
+df$v6 <- 1:24 # 增加新列v6，数值为1到24。
+df # 查看增加后的数据集。
+df[, -10] # 删除新增的第10列。
+```
+
+2、transform函数增删列  
+```{r}
+transform(df, v6 = 1:24) # 增加v6列。
+transform(df, v6 = NULL) # 删除v6列。
+```
+
+3、subset提取删除列  
+```{r}
+subset(df, select = -v6) # 删除df数据集v6列。
+subset(df, select = year:v1) # 只保留了1到5列，去除了不想要的列。
+subset(df, select = c(1:6, 8)) # 通过subset选择子集。
+```
+
+
+4、data.frame函数增加列  
+```{r}
+data.frame(df, v7 = 1:24) # data.frame函数增加列。
+```
+
+
+<font size=5 color=red>tidyverse</font>  
+
+tidyverse包中add_column可实现列的增加，且可以指定位置。  
+mutate函数可以增加列。  
+select函数反选可以实现删除列，只需在不需要的列名前加“-”。另外，我认为通过正向选择想要的列，去除不想要的列，也实现了列删除。
+
+add_column() 增加列。
+
+```{r}
+add_column(df, v7 = 1:24, .before = "v5") # 在v5列前面增加新列v7。
+```
+
+mutate增删列。
+
+```{r}
+df %>% mutate(new = 5) # 增加新列，新列的每个值都是5。
+df %>% mutate(new = 1:24) # 增加新列，列值为1到24。
+df %>% mutate(new = v1 * 10) # 增加新列，新列的值是v1的10倍。
+df %>% mutate(v2 = NULL) # 可以通过对列赋值NULL删除列。
+```
+
+select函数删除列  
+
+```{r}
+df %>% select(-v5) # 删除v5列。
+df %>% select(everything(), -starts_with("v")) # 删除列名首字母为v的列。
+df %>% select(year:block, v5) # 选择df数据集1到4列和v5列。
+```
+
+### 6.1.3 列排序
+
+<font size=5 color=red>Base R</font>  
+搜索学习了一下，在Base R中通过索引去实现列序的改变。   
+
+```{r}
+df[, c(2, 4, 1, 3, 5:9)] # 改变df数据集列序，新的列顺序是原来的df第2和第4列提前。
+subset(df, select = c(2, 4, 1, 3, 5:9)) # 利用subset函数选择排序。
+```
+
+<font size=5 color=red>tidyverse</font>  
+在tidyverse中可以通过以下方法去实现。  
+1、select函数  
+利用select将要排序的列选择出来后排序。  
+
+```{r}
+df %>% select(nitrogen, variety, v3) # 通过select函数将要排序的列按排序要求选择出来。
+df %>% select(nitrogen, block, everything()) # 把nitrogen和block调整到第1和第2列。
+```
+
+2、relocate函数  
+
+relocate可以将选择的列放置在指定列的前后。  
+relocate(.data, ..., .before, .after)
+.data：要处理的数据框；
+...：选择的要移动的列。
+.before和.after：指定放置在之前或之后的列。
+
+```{r}
+df %>% relocate(nitrogen, block) # 只排序指定的列，其他列在指定列后，顺序不变。
+df %>% relocate(nitrogen, .after = v2) # 将选择的列放置在指定位置。
+df %>%
+  relocate(nitrogen, .after = v1) %>%
+  relocate(block, .before = v3) # 重复使用relocate进行多列的移动。
+```
+
+### 6.1.4 列更名
+
+<font size=5 color=red>Base R</font>   
+可通过索引找到需改名的列，通过赋值改变列名。  
+ 
+```{r}
+colnames(df) # 获取列名称。
+names(df) # 同上，获取列名。
+colnames(df)[1] <- "Y" # 将df数据集第1列列名由year改为Y。
+```
+
+
+<font size=5 color=red>tidyverse</font>
+
+set_names() ：修改列名。  
+rename()：部分修改列名，函数内部写新名=旧名。      
+select()：在进行列选择的时候可以给选择的列指定新的名称。    
+relocate()：实际上是将选定的列移动到第1列，移动的同时给列名重新进行了命名。  
+
+```{r}
+set_names(df, LETTERS[1:9]) # 对df所有列进行了重命名，命名为大写字母A到I。
+df %>% rename(B = block, N = nitrogen, 变量1 = v1) # rename函数可对部分列名进行修改，新名=旧名。
+df %>% select_all(toupper) # 将列名全部变为大写字母。小写可以录入参数tolower。
+df %>% select(A = nitrogen, B = v1) # select选择列的同时对列名进行重命名。
+df %>% select(B = block, N = nitrogen, everything()) # 可以通过select函数将要更名的列指定新名，再配合everything选择所有列实现更名。
+df %>% relocate(N = nitrogen) # relocate函数也可以进行列更名。
+```
+
+### 6.1.5 列合并与拆分
+
+<font size=5 color=red>Base R</font>  
+
+列值合并：paste函数；  
+列值拆分：strsplit函数。  
+
+```{r}
+widerdata # 以widerdata数据集为例。
+widerdata$paste <- paste(widerdata$N1, widerdata$N2, sep = ",") # 将widerdata数据集N1和N2列的数据以逗号连接为1列。
+widerdata # 查看合并后的结果。
+wider_split <- strsplit(widerdata$paste, split = ",") # 将widerdata数据集paste列拆分，返回结果为列表。
+wider_split # 返回拆分的结果。
+do.call(rbind, wider_split) # 将拆分的列表利用do.call函数按行连接。此结果返回的是矩阵或数组。
+as.data.frame(cbind(widerdata$year, do.call(rbind, wider_split))) # 通过cbind函数返回原数据集widerdata。通过as.data.frame转变为数据框，至于里面列的类型再利用类型转换函数转为想要的类型。
+unlist(strsplit(widerdata$paste, split = ",")) # 通过unlist可以将结果返回为向量，向量包含了拆分后的所有单元。
+```
+
+<font size=5 color=red>tidyverse</font>  
+
+**列合并**  
+
+unite(data, col, ..., sep = "_", remove = TRUE, na.rm = FALSE)  
+参数详解：
+
+-   data：要合并的数据框。
+-   col：新列的列名，
+-   ...：要合并的列。
+-   sep：指定合并列时添加的分隔符。
+
+```{r}
+hbdata <- widerdata %>% unite(N, N1, N2, sep = ",") # 合并widerdata数据集N1和N2列，合并用的分隔符为,，新列名为N。
+hbdata # 返回合并数据集。
+```
+
+**列拆分**  
+separate( data, col, into, sep = " ", remove = TRUE,convert = FALSE, extra = "warn", fill = "warn", ...)  
+参数详解：
+
+-   data：要拆分的数据框。
+-   col：要拆分的列。
+-   into：指定拆开后的新列。
+-   sep：指定根据什么分隔符来拆分。
+-   convert：指定拆分时要不要进行数据类型转换。
+
+```{r}
+hbdata %>% separate(col = N, into = c("N1", "N2"), sep = ",", convert = T) # 将hbdata数据集N列拆分为N1和N2，以原N列分隔符，进行拆分，同时数据类型由字符型转为整数型。
+```
+
+## 6.2 行操作
+
+### 6.2.1 选择行  
+
+<font size=5 color=red>Base R</font>  
+
+1、通过索引选择行。
+
+```{r}
+df[1:5, ] # 选取df数据集1到5行。
+df[df$nitrogen == "N1", ] # 选取df数据集nitrogen为N1的行。
+with(df, df[nitrogen == "N2", ]) # 结果同上。
+```
+
+2、subset函数选择行   
+subset(x, subset, select, drop = FALSE, ...)  
+
+x：要选择的对象；  
+subset：想要保留行的一个逻辑表达；  
+select：想要索引列的表达式。
+
+```{r}
+subset(df, nitrogen == "N1") # 选取df数据集nitrogen为N1的行。
+subset(df, nitrogen == "N1", select = 1:5) # 选取df数据集nitrogen为N1，前5列的数据。
+```
+
+
+<font size=5 color=red>tidyverse</font>
+
+1、随机选择
+
+```{r}
+sample_n(df, 10) # 随机选择df数据集10行数据。
+sample_frac(df, 0.5) # 随机选择50%的行数据。
+```
+
+2、条件选择   
+filter()函数可以基于观测的值筛选出一个观测子集。第一个参数是数据框名称，第二个参数以及随后的参数是用来筛选数据框的表达式。  
+filter(.data, ..., .preserve = FALSE)   
+
+slice为切片，可以从数据框中选择部分数据。  
+slice(.data, ...,.preserve = FALSE)  
+[<sup>19</sup>](#refer-anchor) 
+
+```{r}
+head(df, 5) # 选取df数据集前5行。
+tail(df, 5) # 选取df数据集最后的5行。
+slice(df, 5) # 选择df数据集第5行。
+slice(df, 1:5) # 返回df数据集1到5行。
+slice(df, 5:n()) # 返回df数据集第5行至最后1行。
+slice(df, -5) # 保留df数据集第5行以外的行。
+filter(df, row_number() == 1:5L) # 选择前5行。
+filter(df, nitrogen == "N1") # 筛选nitrogen为N1的行。
+filter(df, nitrogen %in% "N1") # 结果同上。选择nitrogen列中包含N1的行。
+df %>% filter(!nitrogen == "N2") # 通过反选选择Nitrgen为N1的列。
+filter(df, block %in% c("1", "2")) # 筛选block列中值为1和2对应的行。
+filter(df, variety == "a", nitrogen == "N2") # 多条件筛选。各条件之间用逗号隔开。
+filter(df, variety == "a" & nitrogen == "N2") # 结果同上，筛选variety为a，同时nitrogen为N2对应的行。同时满足两个条件。
+filter(df, variety == "a", nitrogen == "N2", v3 > 2) # 多条件筛选。
+filter(df, between(v3, 1, 2)) # 多条件筛选。v3值在1到2之间的。
+filter(df, variety == "a" | nitrogen == "N2") # 筛选variety为a，或者nitrogen为N2对应的行。|表示或者。
+```
+
+filter_all(.tbl, .vars_predicate, .preserve = FALSE)  
+所有列参与筛选，根据筛选条件筛选行。  
+.tbl 指定筛选的数据。  
+.vars_predicate 指定筛选条件。可以是all_vars()或者是any_vars()。括号中通过表达式指定条件。
+
+```{r}
+filter_all(df, any_vars(. < 1)) # 筛选数据集df中所有列中数值小于1的行。针对所有的数据单元按条件查询，符合条件保留，不符合条件删除。
+filter_all(df, any_vars(str_detect(., pattern = "b"))) # 筛选出所有列范围内数值包含“b”的行。
+```
+
+filter_if(.tbl, .predicate, .vars_predicate, .preserve = FALSE)  
+逻辑判断确定哪些列参与筛选，根据筛选条件筛选。  
+.tbl 指定筛选的数据。  
+.predicate 逻辑判断参与筛选的列；  
+.vars_predicate 指定筛选条件。   
+
+
+```{r}
+df %>% filter_if(is.numeric, any_vars(. < 1)) # 筛选数值型列中变量值小于1的行。首先对列的类型进行判断，这里判断只要是数值型的列就保留参与函数筛选，再进一步的条件为保留的列中只要数值小于1就被筛选出来。
+```
+
+filter_at(.tbl, .vars, .vars_predicate, .preserve = FALSE) 
+
+定义哪些列参与筛选，根据筛选条件筛选。  
+.tbl 指定筛选的数据。    
+.vars 指定参与筛选的列，vars(列名1, 列名2, ....)；  
+.vars_predicate 指定筛选条件。   
+
+```{r}
+df %>% filter_at(vars(v1, v2), all_vars(. < 2)) # vars指定参与筛选条件的列为v1和v2，all_vars指定只要这两列中数值小于2的行就筛选出来。
+```
+
+### 6.2.2 行增减
+
+<font size=5 color=red>Base R</font>
+
+基础包中增加行是通过rbind()函数来完成的。删除行可以通过索引和-来完成。
+
+```{r}
+str(df) # 查看数据结构。
+rbind(df, c(2022, "N1", "c", 4, 1, 2, 3, 4, 5, 2, 22)) # 通过rbind函数增加行。
+df[-2, ] # 删除df第2行。
+```
+
+<font size=5 color=red>tidyverse</font>
+
+增加行  
+add_row(.data, ..., .before = , .after = )  
+.data：要处理的数据框；  
+...：要增加的行，注意行名要与原数据框对应。还要注意所加行的类型要与原数据框列类型一致。  
+.before和.after：指定新加行的位置是在某行之前或之后。
+
+```{r}
+df <- read.csv(file = "df.csv") # 读取数据。
+names(df) # 查看df数据集列名。
+glimpse(df) # 查看df数据结构。可查看到列类型。
+add_row(df, year = 2020, nitrogen = "N2", variety = "b", block = 4, v1 = 1, v2 = 3, v3 = 3, v4 = 5, v5 = 6, .before = 2) # 增加新行。位于原数据第2行前。
+```
+
+删除行  
+slice删除行。 
+filter删除行。
+rows_delete()删除行。[<sup>20</sup>](#refer-anchor)   
+```{r}
+df %>% slice(-2) # 删除df数据集第2行。
+df %>% filter(!nitrogen == "N1") # 删除df数据集nitrogen为N1的行。
+widerdata # 以widerdata数据为例。
+widerdata %>% rows_delete(tibble(year = "2020")) # 删除数据集widerdata中year为2020的行。
+```
+
+
+删除重复行
+
+```{r}
+df1 <- add_row(df, df[1, ], .before = 2) # 增加1行数据，数据内容选取df数据集第1行，插入到新数据集第2行前面，新数据集命名为df1。
+df1 # 查看结果。
+df1 %>% distinct() # 删除df1数据集中的重复行。
+```
+
+去除有缺失值的行  
+```{r}
+df <- rbind(df, c(2022, "N3", "c", 4, 1, 2, 3, 4, 5, 2, 22)) # 增加1行，有缺失值。
+df <- df %>% drop_na() # 删除有缺失值的行。
+```
+
+
+### 6.2.3 行排序
+
+<font size=5 color=red>Base R</font>
+
+```{r}
+df <- read.csv(file = "df.csv") # 读取数据。
+sort(df$v1) # 对df数据集v1进行排序。默认升序。
+sort(df$v1, decreasing = T) # 对df数据集v1进行降序排列。
+rank(df$v1) # 返回向量中每个数值对应的秩（排次）。列数据无重复值时，返回值为整数，若列数据有重复值，返回值会是小数。
+order(df$v1) # 返回向量从小到大排序在原始数据中索引下标。
+df[order(df$v1), ] # 以v1升序排序df数据集。
+df[order(df$v1, df$v2), ] # 先v1，再v3升序排列。
+df[order(-df$v1, -df$v2), ] # v1和v2均降序。
+df[order(df$v1, -df$v2), ] # v1升序，v2降序排列。
+```
+
+<font size=5 color=red>tidyverse</font>
+
+```{r}
+df %>% arrange(v1) # 以v1升序排列。
+df %>% arrange(desc(v1)) # 以v1降序排列。
+df %>% arrange(v1, v2) # 多条件排序，先按第一选项排，再按之后选项排。
+df %>% arrange(desc(v1), desc(v2)) # 先按v1降序排，再按v2降序排。
+df %>% arrange(v1, desc(v2)) # 先按v1升序排，再按v2降序排。
+min_rank(df$v1) # 返回df数据集v1列秩，即排序次序。默认升序。
+df %>%
+  mutate(ranks = min_rank(desc(v1))) %>%
+  arrange(ranks) # 增加一列ranks，列值为以v2列为基础的降序排序，再利用arrange函数以ranks进行升序排序。
+```
+
+### 6.2.4 其他行列操作
+
+1、行汇总  
+
+```{r}
+df <- read_csv(file = "df.csv")
+df %>% mutate(total = sum(v1, v2, v3)) # 增加新列，新列每一行的值是v1，v2，v3列对应行值的和。
+df %>% mutate(total = sum(c_across(where(is.numeric)))) # 添加新列，列中的值是所有数字型变量的和。
+```
+
+
+## 6.3 数据汇总
+
+### 6.3.1 不分组汇总
+
+<font size=5 color=red>Base R</font>  
+在Base R中可用apply函数进行行列的汇总。  
+apply(X, MARGIN, FUN, ...)  
+x：指定要处理的数据集；  
+MARGIN指定操作的方式，1表示按行操作，2表示按列操作；  
+FUN指定应用的函数，可以是平均值mean，求和sum，中位数median等。[<sup>13</sup>](#refer-anchor)    
+
+```{r}
+apply(df[5:8], 1, mean) # 计算df数据集5到8列的每行的平均值。
+apply(df[5:8], 2, mean) # 计算df数据集5到8列的每列的平均值。
+```
+
+也可以用rowMeans和colMeans求行列平均值，类似的函数还有rowSums（行求和）、colSums（列求和），rowMedians（行中位数），colMedians（列中位数）等。  
+```{r}
+rowMeans(df[5:8]) # # 计算df数据集5到8列的每行的平均值。
+colMeans(df[5:8]) # 计算df数据集5到8列的每列的平均值。
+```
+
+
+<font size=5 color=red>tidyverse</font>  
+tidyverse中通过mutate增加新列，在新列中对每行进行汇总，用summarise_at对每一列进行汇总。[<sup>14</sup>](#refer-anchor)  
+
+```{r}
+df %>%
+  select(5:8) %>%
+  mutate(., mean = rowMeans(.)) # 计算df数据集5到8列的每行的平均值。这里通过mutate增加了新列，新列的值是每一行v1到v4值的平均值。
+df %>%
+  rowwise() %>%
+  select(v1:v4) %>%
+  mutate(m = mean(c_across(v1:v4))) # 同上。rowwise指定每一行都是一个分组，c_across选择多列。
+summarise_at(df, 5:8, mean) # 数据集df的5到8列每列的平均值。
+df %>%
+  select(v1:v4) %>%
+  summarise_all(mean) # 结果同上。summarise_all用于指定函数mean应用于选取的所有列。
+df %>%
+  select(v1:v4) %>%
+  summarise_if(is.numeric, mean) # 结果同上，summarise_if用于指定如果选取的v1到v4是数值型列，则应用函数mean。
+```
+
+### 6.3.2 分组汇总  
+
+<font size=5 color=red>Base R</font>  
+在Base R中用aggregate函数
+
+```{r}
+aggregate(df$v1, by = list(df$year), FUN = mean) # 对数据集df中v1列按year进行分组汇总平均值。
+aggregate(v1 ~ year + nitrogen + variety, data = data1, mean) # 对数据集按照year，nitrogen，variety进行分组统计平均值。
+aggregate(v1 ~ year + nitrogen + variety, data = data1, sd) # 对数据集按照year，nitrogen，variety进行分组统计标准差。
+```
+
+<font size=5 color=red>tidyverse</font>
+
+先来分别学习一下tidyverse中分组和汇总对应的函数，分组对应的函数是group_by()，汇总对应的函数是summarise()。
+
+group_by()
+
+```{r}
+df %>% group_by(year) # 数据集df中year进行分组。
+group_keys(df %>% group_by(year)) # 查看分组。
+group_indices(df %>% group_by(year)) # 查看每一行属于哪一分组。
+group_rows(df %>% group_by(year)) # 查看每一组包含哪些行。
+group_split(df %>% group_by(year)) # 将数据按分组依据分成列表，列表中的每个成分是一个分组数据框。
+df %>%
+  group_by(year) %>%
+  group_map(~ head(.x, 5L)) # group_map将head函数依次应用到了分组后列表的每个成分。
+df %>%
+  group_by(year) %>%
+  group_modify(~ head(.x, 2L)) # group_modify将head函数应用到了分组后列表的每个成分，但返回结果不是列表，而是一个完整数据框。
+```
+
+summarise函数
+可以与很多自带或自定义的汇总函数连用。
+n() ：给出观察次数。
+n_distinct(var)：给出变量var唯一值的数量。
+sum(var), max(var), min(var), mean(var), median(var), sd(var), IQR(var)
+... ：给出变量和，最大，最小值，平均值，中位数，标准差，分位数等。
+
+```{r}
+df %>% summarise(n = n()) # 给出df数据集观察次数。
+df %>% summarise(n_distinct(v1)) # 给出df数据集中v1唯一值的数量，v1有24个观测，说明有7个测定值数值是一样的。
+df %>% summarise(sum(v1), mean(v1), median(v1), sd(v1)) # 求数据集df中v1变量的和、平均值、中位数、标准差。
+df %>% summarise(across(everything()), n()) # 对所有列进行计数。这里配合用了across函数。
+df %>% summarise(across(where(is.numeric), mean)) # 配合across对df数据集字符型向量的列求平均值。
+df %>% summarise(across(contains("2"), mean)) # 配合across对df数据列中含2的列求平均值。
+```
+
+tidyverse中可用group_by和summarise函数组合求得分组后应用函数的结果。
+
+```{r}
+library(tidyverse) # 调用tidyverse包。
+df %>%
+  group_by(year) %>%
+  summarise(mean_v1 = mean(v1)) # 使用group_by和summarise函数分组求v1平均值，分组依据是year。
+df %>%
+  group_by(year, nitrogen, variety) %>%
+  summarise(mean(v1)) # 使用group_by和summarise函数分组求v1的平均值，分组依据为year，nitrogen，variety。
+df %>%
+  group_by(year, nitrogen, variety) %>%
+  summarise(mean(v1), mean(v2), mean(v3), mean(v4), mean(v5)) # 对df数据集v1到v5求分组平均值，分组依据为year，nitrogen，variety。
+```
+
+
+### 6.3.3 按行汇总
+
+rowwise()函数为数据框创建按行计算的方式，也就是按行分组。
+
+```{r}
+df %>%
+  rowwise() %>%
+  mutate(total = sum(c(v1, v5))) # 增加新列，新列的值为每行v1和v5的和。
+df %>% mutate(total = sum(c(v1, v5))) # 若不加rowwise，新列中的值为整个v1列和v5列数值型变量值的和。
+df %>%
+  rowwise() %>%
+  summarise(total = sum(c(v1, v5)), sd = sd(c(v1, v5))) # 配合summarise函数汇总。新增加的列total为每一行v1和v5的和，sd为每一行v1和v5的标准差。
+```
+
+
+### 6.3.4 累积汇总
+
+<font size=5 color=red>Base R</font> 
+
+```{r}
+sum(df$v1) # 返回值为v1列的和。
+cumsum(df$v1) # 累积求和。返回值为每一步累积和的值。
+mean(df$v1) # 返回值为v1列的平均值。
+cummean(df$v1) # 累积求平均值。返回值为每一步累积和除累积和数量的值，即算术平均值。
+```
+
+<font size=5 color=red>tidyverse</font>  
+
+cumany(x) : 用来选择遇到第一个满足条件之后的所有行；  
+cumany(!x) : 用来选择遇到第一个不满足条件之后的所有行；  
+cumall(x) : 用来选择所有行直到遇到第一个不满足条件的行；  
+cumall(!x) : 用来选择所有行直到遇到第一个满足条件的行。  
+
+```{r}
+df %>% filter(cumany(v2 < 2)) # df数据集v2列数值小于2的是第四行，因此从第四行之后的行均被选择。
+df %>% filter(cumany(!v2 > 2)) # 选择了不满足条件v2值大于2之后的行。
+df %>% filter(cumall(v2 > 2)) # 因为第4行的v2值小于2，是第一个不满足条件的行。因此到第4行为止。
+df %>% filter(cumall(!v2 < 2)) # 第一个满足条件的行为第4行。
+```
+
+### 6.3.5 其他函数  
+移位函数  
+lag() : 取前一个值，数据整体右移一位，相当于将时间轴滞后一个单位。  
+lead() : 取后一个值，数据整体左移一位，相当于将时间轴超前一个单位。
+```{r}
+df %>% mutate(v1_lag = lag(v1)) # 新增1列v1_lag，数值为v1列数值向后位移1位。
+df %>% mutate(v1_lead = lead(v1)) # 过程与lag相反，新建的v1_lead列的数值相对v1列向前位移了1位。
+```
+
+<font face="黑体" size = 8 color = brown><center>**第三部分 图形绘制篇**</center></font>
+
+# 7 ggplot2基础 
+
+## 7.1 认识ggplot2  
+
+ggplot2是由Hadley Wickham开发的最流行的R可视化包。
+ggplot2中的gg 表示图形语法（Grammar of Graphics），这是一个通过使用“语法”来绘图的图形概念。[<sup>22</sup>](#refer-anchor)  
+
+### 7.1.1 构图基本要素  
+
+ggplot2语法的10大部件：  
+
+- 数据(data)  
+- 映射(mapping)  
+- 几何对象(geom)  
+- 标度(scale)  
+- 统计变换(stats)  
+- 坐标系(coord)  
+- 位置调整(Position adjustments)  
+- 分面(facet)  
+- 主题(theme)  
+- 输出(output)  
+
+ggplot2作图**必须**的3个要件是数据、映射、几何对象。  
+
+来认识一下三要素。  
+
+**数据(Data)**  
+用于绘图的数据，需要是整洁的数据框。如本文中的df数据集。   
+
+**映射(mapping)**   
+将数据集中的变量数据映射 (关联)到相应的图形属性，也称为"美学映射"或"美学"。
+指明了变量与图形所见元素之间的联系，告诉ggplot图形元素想要关联哪个变量数据。映射函数为aes()。  
+常用映射：  
+
+-  x：x轴  
+-  y：y轴  
+-  color：颜色  
+-  size：大小  
+-  shape：形状  
+-  fill：填充  
+-  alpha：透明度   
+
+**几何对象(geometric object)**  
+每个图形都是采用不同的视觉对象来表达数据，称为几何对象。ggplot2提供了50余种几何对象，几何对象对应的函数命名方式为geom_xxx()。常见几何对象如下。   
+
+-  geom_point():散点图  
+-  geom_line():折线图   
+-  geom_smooth():光滑 (拟合)曲线  
+-  geom_bar()/geom_col():条形图  
+-  geom_histogram():直方图  
+-  geom_density():概率密度图  
+-  geom_boxplot():箱线图  
+-  geom_abline():参考直线  
+-  geom_violin():小提琴图  
+-  geom_tile(): 色块图  
+-  geom_density2d(): 2D密度图  
+-  geom_bin2d():二维密度图  
+-  geom_hex():六角直方图  
+-  geom_sf():地图  
+-  geom_count():计数图  
+
+
+三个主要部件即可形成图形，其他部件的设置可完成对图的修饰。  
+Plot = data + Aesthetics + Geometry  
+
+### 7.1.2 图层(layer)  
+
+ggplot2基于图层化语法：图形是一层一层的图层叠加而成。实现方式为“+”叠加图层。  
+
+绘制一幅散点图来理解图形三要素和图层叠加。  
+
+```{r}
+library(tidyverse) # 调用tidyverse包。
+df <- read_csv("df.csv") # 读取数据。
+ggplot(df) # 只是创建了一个空的画布。
+ggplot(df, aes(x = v1, y = v5)) # aes添加了映射，将v1映射为x轴，将y映射为y轴，但构建的是一个空坐标系。
+ggplot(data = df, mapping = aes(x = v1, y = v5)) +
+  geom_point() # 添加几何对象为散点。
+```
+
+这里，数据为df，映射中v1映射给x轴，v5映射给y轴，几何对象为散点图。图形映射和几何对象通过“+”叠加。   
+
+### 7.1.3 图形属性设定和映射  
+
+前面学习了ggplot2构图的三要件（数据、映射、几何对象），有了三个要件就可以画出一幅基本的图。可实际作图时，我们往往需要根据自身需求设定图形的属性。**图形属性** 是图中对象的可视化属性，包括数据点的大小、形状和颜色等。  
+通过将图形属性映射为数据集中的变量，可以以不同的方式传达出数据的相关信息。  
+
+ggplot2是以图层进行图形的构建，而一个图层里设定的图形属性映射只对该图层起作用；  
+数据和映射的关系：映射控制了数据变量和图形属性之间的关系。除过将图形属性映射到数据变量外，还可以在图层的参数设置里将参数设定为单一值。图形属性可以根据数据观测的不同而变化，但是图层参数设定则不行。  
+标度负责控制映射后图形属性的显示方式。标度和映射是紧密相关的概念。[<sup>23</sup>](#refer-anchor)  
+
+下面以实例体会一下图层设定和映射的区别。  
+
+```{r}
+ggplot(df, aes(x = v3, y = v4)) +
+  geom_point() # 三要件绘制基本散点图。
+ggplot(df, aes(x = v3, y = v4)) +
+  geom_point(colour = "red") # 这里设置颜色是在几何对象中完成的，是在图层中进行了参数设定。
+ggplot(df, aes(x = v3, y = v4)) +
+  geom_point(aes(colour = "red")) # 这里是在几何对象图层中将颜色映射为红色。
+ggplot(df, aes(x = v3, y = v4, colour = nitrogen)) +
+  geom_point()
+# 将数据中的v3和v4分别映射给x轴和y轴，将数据中的分类变量nitrogen映射给颜色。
+ggplot(df, aes(x = v3, y = v4)) +
+  geom_point(aes(colour = nitrogen)) #
+```
+
+后两幅图的区别很好的反映了映射和标度的区别。你可以试试ggplot(df, aes(x = v3, y = v4)) + geom_point(colour = nitrogen)代码。看看有什么效果。有时候错误的代码反而能起到很好的学习效果。    
+
+geom_freqpoly()
+geom_violin()
+geom_boxplot()
+geom_col()
+geom_point()
+geom_smooth()
+geom_tile()
+geom_density2d()
+geom_bin2d()
+geom_hex()
+geom_count()
+geom_text()
+geom_sf()
+
+
+## 7.2 标度(scale)  
+
+**标度(scale)**    
+标度是将数据空间（标度的定义域）映射到图形属性空间（标度的值域）的一个函数。  
+标度的作用是调整数据映射的图形属性。这些属性包括颜色，位置，形状，大小，线条类型等。[<sup>25</sup>](#refer-anchor)    
+ggplot2为每一种图形属性提供了一个默认的标度，当默认标度不满足我们的作图需求时，我们需要对默认标度进行修改。     
+
+**标度变换**  
+要想将图形属性映射为变量，需要在函数aes()中将图形属性名称和变量名称关联起来。ggplot2会自动为每个变量值分配唯一的图形属性水平，这个过程即为标度变换。  
+
+通常ggplot2会自动根据输入变量选择最优的坐标刻度方案，若要手动设置或调整，就需要用到标度函数：scale_<MAPPING>_<KIND>()，标度函数构成是scale_图形属性名称_标度名称，如：scale_color_gradient表示对图形颜色的渐变色进行定义。  
+
+
+**标度分类**  
+
+按照对图形作用的部分差异，分为坐标轴标度，颜色标度，填充标度，大小标度，透明度标度，线条标度，形状标度。  
+
+常用的标度函数：  
+
+- scale_x or y_continuous():用于修改连续变量坐标轴的刻度和标签。      
+- scale_x or y_discrete():修改离散变量坐标轴的标签。    
+- scale_x or y_date():设置日期刻度。    
+- scale_x_log10(), scale_x_sqrt(), scale_x_reverse():坐标刻度取对数，开方，翻转。
+- scale_x_gradient(), scale_x_gradient2(), scale_x_gradientn()：渐变色设置，x可为 color, fill 等。  
+
+
+![](D:/Rwd/Tidyverse study note/标度1.jpg)
+
+### 7.2.1 颜色标度  
+
+**连续型数据**  
+scale_colour_gradient()：使用low和high参数分别指定连续变量最小值和最大值对应的颜色，即可自动计算一条连续的调色板。   
+scale_color_gradient2()：当连续型变量包含有特殊意义的中间值时使用。  
+scale_colour_gradientn()：当有多个中间值时使用。  
+scale_colour_constinous()：
+
+```{r}
+ggplot(df, aes(v3, v4, color = v4)) +
+  geom_point() +
+  scale_colour_gradient(low = "gray", high = "red") # 设置最小颜色为灰色，最大颜色为红色，图形显示为灰色到红色的渐变。
+ggplot(df, aes(v3, v4, color = v4)) +
+  geom_point() +
+  scale_colour_gradient2(low = "blue", mid = "yellow", high = "red") # 设置最小颜色为蓝色，中间色为黄色，最大颜色为红色，图形显示为三色渐变。
+ggplot(df, aes(v3, v4, color = v4)) +
+  geom_point() +
+  scale_colour_gradientn(colors = c("red", "orange", "yellow", "green")) # 设置颜色为向量，图形显示以向量设定颜色渐变。
+```
+
+
+## 7.3 图形设置(plot adjust)  
+
+### 7.3.1 坐标轴设置(axis)
+
+**坐标原点归位**   
+
+你会发现，ggplot2绘制的初始图形，坐标原点均不是从0开始，可通过以下方式调整。  
+```{r}
+library(tidyverse) # 调用tidyverse包。
+df <- read_csv("df.csv") # 读取df数据集。
+p <- ggplot(df, aes(v1, v2)) +
+  geom_point() # 绘制基础图形，定义为p。
+p # 显示图形。
+p + coord_cartesian(xlim = c(0, NA), ylim = c(0, NA)) # 坐标原点归位。
+p + expand_limits(x = 0, y = 0) # 结果同上。
+p + xlim(c(0, 1.5)) + ylim(c(0, 4.5)) # 也可以通过设置坐标轴刻度范围让起始刻度从0开始。
+```
+
+**设置坐标轴范围**  
+
+- 通过coord_cartesian()设置xlim和ylim。   
+- 通过xlim(c(轴范围最小值,轴范围最大值))和ylim(c(轴范围最小值,轴范围最大值))。  
+- 通过scale_y_continuous(limits =c())设置。[<sup>24</sup>](#refer-anchor)    
+
+```{r}
+p + coord_cartesian(xlim = c(0, 1.5), ylim = c(0, 4.5)) # 通过coord_cartesian函数中的xlim和ylim控制x轴和y轴的取值范围。
+p + xlim(c(0, 1.5)) + ylim(c(0, 4.5)) # xlim和ylim设置轴取值范围。
+p + scale_x_continuous(limits = c(0, 1.5)) + scale_y_continuous(limits = c(0, 4.5)) # scale_x or y_continuous(limits = )调整轴取值范围。
+```
+
+**坐标轴翻转**   
+
+coord_flip(xlim = NULL, ylim = NULL, expand = TRUE)  
+实现坐标轴翻转，即 x 轴与 y 轴互换。
+
+```{r}
+ggplot(df, aes(nitrogen, v1)) +
+  geom_col() # 基础图形。
+ggplot(df, aes(nitrogen, v1)) +
+  geom_col() +
+  coord_flip() # 翻转坐标轴。
+```
+
+scale_x_reverse或scale_y_reverse    
+实现的是x轴或y轴取值范围最大最小值的翻转。
+
+```{r}
+p + scale_x_reverse() # 原来x轴最大值翻转至坐标左下角原来最小值的地方。
+p + scale_y_reverse() # 原来y轴最大值翻转至坐标左下角原来最小值的地方。
+```
+
+**坐标轴比例缩放**   
+
+coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)   参数ratio用于指定纵横比，也就是纵轴1单位显示的长度，是横轴1单位显示的长度的几倍。 默认值为1，表示x 轴和 y 轴之间的缩放比例为 1：1。 ratio值越小，图形越扁。[<sup>26</sup>](#refer-anchor)  
+
+```{r}
+p # 基础图。
+p + coord_fixed() # coord_fixed()函数调整纵横比为1：1。
+p + coord_fixed(ratio = 2) #  纵轴单位显示长度是横轴单位显示长度的2倍。
+p + coord_fixed(ratio = 1 / 2) #  纵轴单位显示长度是横轴单位显示长度的0.5倍。
+p + coord_fixed(ratio = 1 / 10) #  纵轴单位显示长度是横轴单位显示长度的0.1倍。
+p + xlim(c(0, 5)) + ylim(c(0, 5)) + coord_fixed() # 这里将横轴和纵轴的刻度范围设置成了一样，再调整坐标轴比例为1：1。
+```
+
+
+**更改分类轴项目顺序**   
+
+scale_x_discrete()或scale_y_discrete()：实现图形分类变量顺序变更。  
+
+```{r}
+ggplot(df, aes(nitrogen, v1)) +
+  geom_boxplot() # 基础图绘制。
+ggplot(df, aes(nitrogen, v1)) +
+  geom_boxplot() +
+  scale_x_discrete(limits = c("N2", "N1")) # 调整了x分类变量顺序。
+df$nitrogen <- factor(df$nitrogen, levels = c("N1", "N2"), order = TRUE) # 先设置df数据集nitrogen为因子，因子水平为N1和N2，让因子顺序为N1和N2。
+df$nitrogen # 查看因子。
+ggplot(df, aes(nitrogen, v1)) +
+  geom_boxplot() +
+  scale_x_discrete(limits = rev(levels(df$nitrogen))) # 反转因子顺序。
+```
+
+**坐标轴坐标转换**  
+
+scale_x or y_log10()：对x轴或y轴做对数转换。
+scale_x or y_sqrt()：对x轴或y轴数值取平方根。  
+
+```{r}
+p + scale_x_log10() # 对x轴数值取对数。
+p + scale_x_sqrt() # 对x轴数值取平方根。
+```
+
+
+### 7.3.2 坐标轴标签设置(axis label)    
+
+**删除刻度线和标签**  
+
+theme(axis.title.x or y = element_blank()) 删除轴标签。
+xlab(NULL) 删除x轴标签
+
+```{r}
+ggplot(df, aes(v3, v4)) +
+  geom_point() # 基础散点图。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  theme(axis.title.x = element_blank()) # 删除x轴标签。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  theme(axis.title.y = element_blank()) # 删除y轴标签。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  xlab(NULL) # 删除x轴标签。
+```
+
+theme(axis.ticks = element_blank()) 删除刻度线。
+theme(axis.text.x or y = element_blank()) 删除轴刻度标签。
+
+```{r}
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  theme(axis.ticks = element_blank()) # 删除轴刻度线。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  theme(axis.ticks = element_blank(), axis.text = element_blank()) # 删除轴刻度线并删除刻度标签。
+```
+
+
+**修改刻度标签**  
+
+*连续变量刻度标签设置*  
+
+scale_x or y_continuous(name, breaks, labels, limits, trans)  
+name指定x或y轴的标签，若为NULL，不显示轴标签；  
+breaks指定各个刻度的位置，若为NULL，不显示刻度；  
+labels指定各个刻度的标签；  
+limits指定刻度的范围；  
+trans指定坐标轴值转换，如可以为log10。   
+
+
+```{r}
+ggplot(df, aes(v3, v4)) +
+  geom_point() # 基础散点图。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  scale_x_continuous(name = "This is x axis", breaks = seq(0, 4, by = 1), labels = c("one", "two", "three", "four", "five"), limits = c(0, 4)) +
+  scale_y_continuous(name = "This is y axis", breaks = seq(2, 8, by = 1), labels = c("a", "b", "c", "d", "e", "f", "g"), limits = c(2, 8)) # 修改散点图y轴刻度和标签。
+```
+
+*离散型变量刻度标签设置*  
+
+scale_x or y_discrete():修改离散变量坐标轴的标签。
+
+```{r} 
+ggplot(df, aes(nitrogen, v5)) +
+  geom_bar(stat = "identity", position = "dodge") # 基础柱状图。
+ggplot(df, aes(nitrogen, v5)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_x_discrete(labels = c("N1" = "Nitrogen rate1", "N2" = "Nitrogen rate2")) # 修改离散型变量x坐标轴标签。
+```
+
+从以上可以看出，在scale_x or y_continous和discrete中将一些参数的值赋予NULL，也可以起到删除的效果。  
+
+**日期型刻度标签设置**  
+
+scale_x_date()设置日期刻度，参数date_breaks设置刻度间隔，date_labels设置标签的日期格式；借助 scales包中的函数设置特殊格式，比如百分数(percent)、科学计数法 (scientific)、美元格式 (dollar)等。
+
+```{r}
+economics_long # 内置数据集。
+ggplot(head(economics_long, 20), aes(x = date, y = value)) +
+  geom_line() # 基础线图。
+ggplot(head(economics_long, 20), aes(x = date, y = value)) +
+  geom_line() +
+  scale_x_date(date_breaks = "5 months", date_labels = "%m%Y") # 改变x轴刻度为每5个月间隔，标签为月年格式。
+ggplot(head(economics_long, 20), aes(x = date, y = value)) + 
+  geom_line() + 
+  scale_x_date(date_breaks = "1 months", date_labels = "%b%Y") +
+  coord_cartesian(xlim = c(as.Date("1967-07-01"), as.Date("1969-02-01")))
+```
+
+**轴标签美学设置**   
+
+*轴标签美学*  
+axis.title() 更改x和y轴外观。
+axis.title.x() 更改x轴外观。   
+axis.title.y() 更改y轴外观。  
+
+```{r}
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  xlab("this is x") +
+  theme(axis.title = element_text(colour = "red", size = 15)) # 更改x轴和y轴外观。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  theme(axis.title.x = element_text(face = "italic", size = 15, colour = "blue")) # 更改x轴标签字体样式，大小，颜色。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  theme(axis.title.y = element_text(family = "serif", face = "bold", size = 20, colour = "brown")) # 更改x轴标签字体，字体样式，大小，颜色。
+```
+
+
+*刻度标签美学*
+
+theme(axis.text = element_text())中axis.text 和/或从属元素 axis.text.x 和 axis.text.y 来更改轴文本的外观。
+element_text中参数说明。  
+angle：指定刻度线标签旋转角度；
+hjust：设置水平对齐方式（左，中，右）；  
+vjust：设置垂直对齐方式（顶部，中间，底部）；  
+colour：设置字体颜色；  
+size：设置字体大小；  
+family：设置字体；windowsFonts()可查看windows字体；  
+face：设置字体样式，粗体bold，斜体italic；  
+
+
+```{r}
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  theme(axis.text = element_text(colour = "red")) # 改变轴标签字颜色为红色。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  theme(axis.text = element_text(colour = "red"), 
+        axis.text.x = element_text(colour = "blue", size = 20)) 
+# 单独修改x轴标签字体颜色为蓝色。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  theme(axis.text = element_text(colour = "red"), 
+        axis.text.x = element_text(angle = 90, 
+                                   hjust = 0.1, 
+                                   vjust = 0.5)) 
+# x轴刻度标签文本旋转90度，hjust用于设置水平对齐方式（左，中，右），vjust用于设置垂直对齐方式（顶部，中间，底部）。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  theme(axis.text = element_text(family = "serif")) # 设置字体为新罗马。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  theme(axis.text = element_text(face = "italic")) # 设置刻度线标签字体为斜体。
+```
+
+
+### 7.3.3 图形标题   
+
+ggtitle() 添加主副标题。
+
+```{r}
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  ggtitle("Main title", subtitle = "Subtitle") # 添加主副标题。
+```
+
+可以看出标题默认是在图形左上角的，要调整位置可配合theme函数完成，其中的hjust是水平方向的调整参数，vjust是垂直方向的调整参数。  
+```{r}
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  ggtitle("Main title", subtitle = "Subtitle") +
+  theme(plot.title = element_text(color = "red", size = 20, hjust = 0.5)) # 标题居中。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  ggtitle("Main title", subtitle = "Subtitle") +
+  theme(plot.title = element_text(color = "red", size = 20, hjust = 0.5, vjust = -15)) # 通过vjust参数将标题调整到图形内部。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  annotate("text", x = 1.5, y = 7, label = "This is just an example") # 将标题直接移动到图内。
+```
+
+labs() 添加标题。
+
+```{r}
+ggplot(df, aes(v3, v4, color = nitrogen)) +
+  geom_point() +
+  labs(title = "Main title", subtitle = "Subtitle", caption = "Caption", x = "Axis of x", y = "Axis of y", color = " Legend title") # labs设置了标签，title用于指定主标题，subtitle用于指定副标题，caption用于指定图注，x和y分别用于指定x和y轴标题，color用于指定 Legend title。
+ggplot(df, aes(v3, v4, color = nitrogen)) +
+  geom_point() +
+  labs(title = "Main title", subtitle = "Subtitle", caption = "Caption", x = "Axis of x", y = "Axis of y", color = " Legend title") +
+  theme(plot.title = element_text(hjust = 0.5)) # 调整标题位置。
+```
+
+坐标轴标题  
+
+可以用xlab或ylab分别设置，也可以在labs中指定。
+
+```{r}
+ggplot(df, aes(v3, v4, color = nitrogen)) +
+  geom_point() +
+  xlab("this is x axis") +
+  ylab("this is y axis") # 指定轴标题。
+ggplot(df, aes(v3, v4, color = nitrogen)) +
+  geom_point() +
+  labs(x = "this is x axis", y = "this is y axis") # 同上。
+ggplot(df, aes(v3, v4, color = nitrogen)) +
+  geom_point() +
+  labs(x = "this is x axis", y = "this is y axis") +
+  theme(axis.title.x = element_text(hjust = 1), axis.title.y = element_text(hjust = 0)) # 坐标轴标题位置调整。
+ggplot(df, aes(v3, v4, color = nitrogen)) +
+  geom_point() +
+  labs(x = "this is x axis", y = quote("this is y axis" ~ N - NO[3]^{
+    -1
+  })) # 坐标轴标题带公式。
+ggplot(df, aes(v3, v4, color = nitrogen)) +
+  geom_point() +
+  labs(x = "this is x axis", y = "this is y axis") +
+  theme(axis.title.x = element_text(margin = margin(2, 1, 0, 1, "cm")), axis.title.y = element_text(hjust = 0)) # x轴标题与坐标轴距离调整。
+```
+
+轴标题含特殊字符  
+
+```{r}
+ggplot(df, aes(v3, v4, color = nitrogen)) +
+  geom_point() +
+  xlab(bquote("this is x axis"(kg * hm^-2))) # 坐标轴标题含特殊字符。
+ggplot(df, aes(v3, v4, color = nitrogen)) +
+  geom_point() +
+  xlab(expression(Production ~ rate ~ "" ~ mu ~ moles ~ NO[3]^
+    {
+      -1
+    } - N ~ Kg^{
+    -1
+  })) # 再一个例子。
+```
+
+
+### 7.3.4 图形注释(annotation)  
+
+**文本注释**   
+
+*指定位置的文本*
+
+geom_text()函数添加
+geom_text(
+  mapping = NULL,
+  data = NULL,
+  stat = "identity",
+  position = "identity",
+  ...,
+  parse = FALSE,
+  nudge_x = 0,
+  nudge_y = 0,
+  check_overlap = FALSE,
+  na.rm = FALSE,
+  show.legend = NA,
+  inherit.aes = TRUE
+)
+
+mapping：通过aes()创建的一系列美学映射， 常见映射参数包括x， y，data，label，family，color，size，angle，fontface，vjust，hjust，nudge_x，nudge_y，parse，check_overlap等。  
+x和y指定注释的位置；data指定用于注释的数据集，若不指定，默认使用全局数据集；label指定注释内容；family指定字体；color指定颜色；size指定大小；angle指定角度；fontface指定字体样式；vjust纵向偏移调节，hjust横向偏移调节；nudge_x和nudge_y用于调节注释偏移量，与vjust和hjust参数不同的是，它的单位和对应坐标轴的刻度相同；parse指定为TRUE时，可添加公式等内容；check_overlap为逻辑型参数，若设为TRUE，注释避免重叠。 
+
+```{r}
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  geom_text(x = 1.4, y = 4, label = "Group 2", alpha = .1) # 添加文本注释。
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  geom_text(aes(x = 1.4, y = 4, label = "italic(y) == frac(x,y)%*%sqrt(x)"), parse = T, color = "red", size = 6, alpha = 0.05, angle = 30, family = "serif", fontface = "bold.italic") # 各参数设置尝试。
+```
+
+annotate()函数添加  
+annotate(
+  geom,
+  x = NULL,
+  y = NULL,
+  xmin = NULL,
+  xmax = NULL,
+  ymin = NULL,
+  ymax = NULL,
+  xend = NULL,
+  yend = NULL,
+  ...,
+  na.rm = FALSE
+)  
+geom指定几何对象；x和y指定注释位置；xmin等是用于当几何对象为线段或几何图形时指定几何对象的边界。
+```{r}
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  annotate("text", x = 1.4, y = 4, parse = TRUE, size = 4, label = "'Function:  ' * y == frac(1, sqrt(2*pi)) * e^{-x^2/2}") # 添加公式注释。
+```
+
+geom_label()函数  
+geom_label(
+  mapping = NULL,
+  data = NULL,
+  stat = "identity",
+  position = "identity",
+  ...,
+  parse = FALSE,
+  nudge_x = 0,
+  nudge_y = 0,
+  label.padding = unit(0.25, "lines"),
+  label.r = unit(0.15, "lines"),
+  label.size = 0.25,
+  na.rm = FALSE,
+  show.legend = NA,
+  inherit.aes = TRUE
+)
+参数多与geom_text参数相同，以下为不同参数：  
+- label.padding：标签文本与外框的距离大小；  
+- label.r：外框圆角的半径；  
+- label.size：外框线条的尺寸，单位为毫米（mm）。  
+```{r}
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  geom_label(aes(x = 1.4, y = 4, label = "annotation"),
+    size = 4, color = "black",
+    label.padding = unit(0.1, "lines"),
+    label.r = unit(0.05, "lines"),
+    label.size = 0.1
+  ) # geom_label添加注释。
+```
+
+
+*对图形元素添加注释*
+geom_text()函数  
+
+```{r}
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  geom_text(aes(label = variety), size = 4) # 添加图形元素注释。
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  geom_text(aes(label = variety), size = 4, nudge_x = 0.02, nudge_y = 0.2, check_overlap = T) # 参数调整。nudge_x or y调整了注释偏移量，check_overlap设定注释不重叠。
+```
+
+geom_label()函数  
+
+```{r}
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  geom_label(aes(label = v5), size = 2, nudge_x = 0.02) # 添加图形元素注释。
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  geom_label(aes(label = variety),
+    size = 4,
+    label.padding = unit(0.1, "lines"),
+    label.r = unit(0.05, "lines"),
+    label.size = 0.1, nudge_x = 0.02
+  ) # 参数调整。
+```
+
+ggrepel包实现图形元素注释。
+
+```{r}
+library(ggrepel) # 调用ggrepel包，此包用于添加标注。
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  labs(
+    title = "scatter point",
+    subtitle = "Subtitle",
+    caption = "Caption",
+    x = "Axis of x", y = "Axis of y",
+    color = "N"
+  ) +
+  geom_text_repel(aes(label = v1)) # 添加图形元素注释。
+```
+
+
+**几何对象注释**    
+annotate函数可用于添加任何类型的几何对象。参数geom用于指定对象，text是文本，mtext是轴标签，segments是短线，arrows是箭头，rect是矩形，curve是曲线。  
+
+```{r}
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  annotate(geom = "text", x = 2, y = 6, label = "annotation") # 在指定点添加文本注释。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  annotate("text", x = 1:2, y = 5:6, label = "Some text") # 指定的多个点同时添加文本注释。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  annotate("rect", xmin = 1, xmax = 2, ymin = 3, ymax = 5, alpha = .2) # 添加矩形。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  geom_rect(aes(xmin = 0, xmax = 2, ymin = 3, ymax = 6), alpha = 0.02, data = df) # 通过geom_rect函数添加矩形。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  annotate("segment", x = 1, xend = 2, y = 5, yend = 6, colour = "blue") # 添加线段。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  annotate("segment", x = 1, xend = 2, y = 5, yend = 6, colour = "red", arrow = arrow()) # 添加箭头。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  annotate("pointrange", x = 2, y = 5, ymin = 5, ymax = 6, colour = "red", size = 1.5) # 添加点线。
+ggplot(df, aes(v3, v4)) +
+  geom_point() +
+  annotate("curve", x = 1, y = 5, xend = 1.6, yend = 5.9, curvature = 0.5, colour = "red", size = 1, arrow = arrow(length = unit(2, "mm"))) +
+  annotate(geom = "text", x = 0.7, y = 5, label = "this point", color = "blue") # 添加带箭头曲线和文本标注。
+```
+
+**添加参考线**  
+geom_hline()：水平参考线；yintercept指定参考线对应的y值。
+geom_vline()：垂直参考线；xintercept指定参考线对应的x值。
+geom_abline()：斜线，参数intercept用于指定截距，slope用于指定斜率；[<sup>28,29</sup>](#refer-anchor)  
+
+```{r}
+coef(lm(v5 ~ v1, df)) # 查看v5和v1回归系数。
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  geom_hline(yintercept = 5) +
+  geom_vline(xintercept = 1.2) +
+  geom_abline(intercept = -9.31, slope = 11) # 添加参考线。
+df %>%
+  filter(nitrogen == "N1") %>%
+  select(v5) %>%
+  ggplot(aes(v5)) +
+  geom_density(fill = "yellow") +
+  annotate("segment", x = 3, y = 0, xend = 3, yend = 0.275, color = "green", size = 1.5, linetype = "dashed") # 假设从x=3开始是数据下降的临界点，我们想在这里加一条参考线。
+```
+
+**添加误差线**  
+geom_errorbar() : 要先求算好柱状图平均值和标准差，函数内部以平均值+标准差和平均值-标准差进行映射。
+```{r}
+df_sd <- df %>%
+  group_by(nitrogen) %>%
+  summarise(mean = mean(v1), sd = sd(v1)) # 分组统计df数据集。
+ggplot(df_sd, aes(x = nitrogen, y = mean)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = 0.5, color = "red") # 添加误差线。
+```
+
+**添加边际**  
+```{r}
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  geom_rug() # 添加边际地毯。
+```
+
+
+**图形嵌套注释**    
+annotation_custom(grob,xmin = -Inf, xmax = Inf,ymin = -Inf, ymax = Inf)  
+- grob：作为嵌套的图形；  
+- xmin、xmax、ymin、ymax：嵌套图形放置的区域。  
+
+嵌套图形需要先使用ggplot2绘图系统进行绘制，再使用ggplotGrob()函数进行封装。  
+
+```{r}
+g <- ggplot(df, aes(x = nitrogen, y = v1)) +
+  geom_col() # 先构建嵌套图形。
+g <- ggplotGrob(g) # 封装嵌套图形。
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  annotation_custom(g, xmin = 1.1, xmax = 1.2, ymin = 6, ymax = 8) # 嵌套图形。
+```
+
+**分面注释**   
+
+```{r}
+ggplot(df, aes(x = nitrogen, y = v1)) +
+  geom_col() +
+  facet_grid(. ~ year) # 绘制分面图。
+f_label <- data.frame(year = c("2020", "2021"), label = c("2020", "2021")) # 构建分面标注数据框。
+ggplot(df, aes(x = nitrogen, y = v1)) +
+  geom_col() +
+  facet_grid(. ~ year) +
+  geom_text(x = 1, y = 8, aes(label = label), data = f_label, color = "blue") # 分面添加注释。
+ggplot(df, aes(x = nitrogen, y = v1)) +
+  geom_col() +
+  facet_grid(. ~ year) +
+  annotate("text", x = 1, y = 8, label = "facet annotation", color = "blue") # 给分面图添加统一的注释。
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  facet_grid(. ~ nitrogen) +
+  geom_smooth(method = "lm") # 按分面添加回归线。
+```
+
+**拼图时添加注释**  
+```{r}
+p1 <- ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  geom_smooth(method = "lm") # 构建图1.
+p1 # 查看图1.
+p2 <- ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_col() # 图2.
+p2 # 查看图2.
+p3 <- ggplot(df, aes(v1, v5, fill = nitrogen)) +
+  geom_boxplot() # 图3.
+p3 # 查看图3.
+p4 <- ggplot(df, aes(v5, fill = nitrogen)) +
+  geom_density() # 图4.
+p4 # 查看图4.
+library(patchwork) # 调用patchwork包。
+p1 + p2 + p3 + p4 + plot_annotation(tag_levels = "A") # 给拼图添加注释。
+```
+
+### 7.3.5 图例(legend)  
+
+基础图形绘制  
+```{r}
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() # 基础图形绘制。
+```
+
+**图例移除**  
+```{r}
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point(show.legend = FALSE) # 方法1：参数show.legend = FALSE移除图例。
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  guides(color = FALSE) # 方法2：guides()移除图例。注意里面的color= F与映射color = nitrogen对应，要是映射是fill = nitrogen，这里设置时就写为fill = F。
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  scale_color_discrete(guide = FALSE) # 方法3：scale_color_discrete移除图例，同上，用标度函数时要与映射对应。
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  theme(legend.position = "none") # 方法4：通过主题设置移除图例。
+```
+
+**图例位置变更**  
+theme(legend.position = ...)  ...：top为顶部，left为左侧，right为右侧，bottom为底部。
+...处也可以是指定的坐标值，这样图例就可以被放置在指定位置，默认情况下，图形坐标空间从左下角的(0,0)到右上角的(1,1)。
+
+```{r}
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  theme(legend.position = "top") # theme(legend.position = ...)改变图例位置，top为顶部，left为左侧，right为右侧，bottom为底部。
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  theme(legend.position = c(0.8, 0.4)) # 移动至指定位置。
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  theme(legend.position = c(1, 0), legend.justification = c(1, 0)) # 将图例放置在图形内右下角，legend.justification()用于在指定坐标后再调节图例的相对位置，默认情况下，图例的中心 （.5， .5） 位于坐标处。
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  theme(legend.position = c(1, 0), legend.justification = c(1, 0)) +
+  theme(legend.background = element_rect(fill = "white", colour = "black")) # 给图例加外边框。
+ggplot(df, aes(v1, v5, color = nitrogen)) +
+  geom_point() +
+  theme(legend.position = c(1, 0), legend.justification = c(1, 0)) +
+  theme(legend.background = element_blank()) +
+  theme(legend.key = element_blank()) # 　去除外边框。
+```
+
+
+**图例修改**  
+
+标题修改
+```{r}
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_boxplot() +
+  labs(fill = "N rate") # labs()修改 Legend title，这里labs()中参数要与前面的映射相对应。
+ggplot(df, aes(v1, v5, color = nitrogen, size = year)) +
+  geom_point() +
+  labs(colour = "N rate", size = "year") # 对多映射后的 Legend title进行修改。
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_boxplot() +
+  guides(fill = guide_legend(title = "N rate")) # guides()函数修改 Legend title。
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_boxplot() +
+  scale_fill_discrete(name = "N rate") # scale_fill_discrete()修改 Legend title。
+ggplot(df, aes(v1, v5, color = nitrogen, shape = nitrogen)) +
+  geom_point() # nitrogen同时映射给颜色和形状，出来的图例是一个。
+ggplot(df, aes(v1, v5, color = nitrogen, shape = nitrogen)) +
+  geom_point() +
+  labs(shape = "shape") # 当只修改一个映射时，图形会将另一个映射的图例也显示出来。
+ggplot(df, aes(v1, v5, color = nitrogen, shape = nitrogen)) +
+  geom_point() +
+  labs(shape = "shape", color = "colour") # 同时将两个都修改。
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_boxplot() +
+  labs(fill = NULL) # 想要删除 Legend title，只需给映射赋值NULL。
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_boxplot() +
+  guides(fill = guide_legend(title = NULL)) # 删除 Legend title，注意作图时图例由fill映射产生，因此，这里guides中要用fill设置。
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_boxplot() +
+  scale_fill_discrete(name = "") # 在标度函数中可以将名字赋值为空。
+```
+
+标签修改
+```{r}
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_boxplot() +
+  scale_fill_discrete(labels = c("N rate1", "N rate2")) # 修改图例标签。
+ggplot(df, aes(v1, v5, color = nitrogen, shape = variety)) +
+  geom_point() +
+  scale_color_discrete(labels = c("a", "b")) +
+  scale_shape_discrete(labels = c("A", "B")) # 多分组对应的图例标签修改，分别用对应的标度函数设置。
+```
+
+
+顺序修改
+```{r}
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_col() +
+  guides(fill = guide_legend(reverse = T)) # 翻转图例标签分组顺序。
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_col() +
+  scale_fill_discrete(guide = guide_legend(reverse = T)) # 通过scale_fill_discrete标度函数翻转图例分组标签顺序，结果同上。
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_boxplot() +
+  scale_fill_discrete(limits = c("N2", "N1")) # 修改了图例中分组标签的顺序。
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_boxplot() +
+  scale_fill_discrete(breaks = c("N2", "N1")) # 也可以设置breaks改变标签顺序。
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_boxplot() +
+  scale_fill_discrete(breaks = c("N2", "N1")) +
+  scale_x_discrete(limits = c("N2", "N1")) # 同时修改坐标轴和图例的标签分组顺序。
+```
+
+
+**图例美学**  
+
+```{r}
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_col() +
+  scale_fill_grey(start = 0.5, end = 1, limits = c("N2", "N1")) # 灰度调色。
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_col() +
+  scale_fill_brewer(palette = "Pastel2", limits = c("N2", "N1")) # 通过调色板填充色。
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_boxplot() +
+  theme(legend.title = element_text(face = "italic", family = "sans", colour = "red", size = 14)) # theme()函数修改 Legend title样式。
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_boxplot() +
+  theme(legend.background = element_rect(fill = "green")) # 图例背景改为绿色。
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_boxplot() +
+  theme(legend.background = element_rect(fill = NULL, color = "blue")) # 给图例添加边框，边框颜色为蓝色。
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_boxplot() +
+  theme(legend.text = element_text(face = "italic", family = "Times", colour = "brown", size = 14)) # theme()函数修改图例标签样式。
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_boxplot() +
+  guides(fill = guide_legend(title.theme = element_text(face = "italic", family = "sans", colour = "blue", size = 14))) # guides()函数修改 Legend title样式。
+ggplot(df, aes(nitrogen, v5, fill = nitrogen)) +
+  geom_boxplot() +
+  guides(fill = guide_legend(label.theme = element_text(face = "italic", family = "Times", colour = "blue", size = 14))) # 同样的，可以通过guides()函数修改标签样式。
+```
+
+## 7.4 主题(theme)      
+
+ggplot2绘图时首先确定数据如何展示，然后再用主题系统对细节进行渲染。主题系统包括绘图区的背景、网格线、坐标轴线条等图表细节部分。 主题是由控制图形外观的多个元素构成的。  
+主题设置可分为两种：  
+全局设置：theme_set(theme_bw())。  
+局部设置：ggplot() + theme_bw()，只改变单个图形的主题。  
+个人认为，主题设置可通过三种方式实现：1、使用内置主题，2、使用主题相关的包；3、用户自定义主题。  
+
+**1、内置主题**      
+
+ggplot2提供了8种内置主题。   
+theme_gray()：默认主题，浅灰色背景，白色网格线，无边框。  
+theme_bw()：白色背景，浅灰色网格线，黑色边框。  
+theme_linedraw()：白色背景，黑色网格线，黑色边框。  
+theme_light()：白色背景，浅灰色坐标轴，浅灰色网格线，浅灰色边框。   
+theme_dark()：灰黑色背景，灰色网格线，无边框。   
+theme_minimal()：白色背景，浅灰色网格线，无坐标轴，无边框。    
+theme_classic()：白色背景，无网格线，无边框。
+theme_void()：完全空白，只显示几何对象。   
+
+```{r}
+data1 <- read_csv(file = "data1.csv") # 导入数据。
+ggplot(data1, aes(v1, v2)) +
+  geom_point() # 默认主题。
+ggplot(data1, aes(v1, v2)) +
+  geom_point() +
+  theme_bw() # theme_bw()主题。
+ggplot(data1, aes(v1, v2)) +
+  geom_point() +
+  theme_linedraw() # theme_linedraw()
+ggplot(data1, aes(v1, v2)) +
+  geom_point() +
+  theme_light() # theme_light()
+ggplot(data1, aes(v1, v2)) +
+  geom_point() +
+  theme_dark() # theme_dark()
+ggplot(data1, aes(v1, v2)) +
+  geom_point() +
+  theme_minimal() # theme_minimal()
+ggplot(data1, aes(v1, v2)) +
+  geom_point() +
+  theme_classic() # theme_classic()
+ggplot(data1, aes(v1, v2)) +
+  geom_point() +
+  theme_void() # theme_void()
+```
+
+**2、使用主题相关的包**  
+
+类似的包有ggthemes、ggthemer、ggtech、ggsci、ggprism、ggpubr、ggThemeAssist等，ggThemeAssist包安装后，可在Rstudio中实现鼠标操作设置主题。这里以ggprism和ggpubr包为例。  
+
+```{r}
+ggplot(data1, aes(nitrogen, v1, fill = nitrogen)) +
+  geom_boxplot() # ggplot2箱线图。
+library(ggprism) # 调用ggprism包。
+ggplot(data1, aes(nitrogen, v1, fill = nitrogen)) +
+  geom_boxplot() +
+  theme_prism() # graphpad prism主题风格的箱线图。
+library(ggpubr) # 调用ggpubr包。
+ggplot(data1, aes(nitrogen, v1, fill = nitrogen)) +
+  geom_boxplot() +
+  theme_pubr() # 使用ggpubr包中的theme_pubr主题。
+```
+
+**3、用户自定义主题**   
+
+通过theme()函数参数修改，确定自己喜欢的主题，可以保存为变量，以后方便重复调用。    
+
+theme(  
+  line,  
+  rect,  
+  text,  
+  title,  
+  aspect.ratio,  
+  axis.title,  
+  axis.title.x,  
+  axis.title.x.top,  
+  axis.title.x.bottom,  
+  axis.title.y,  
+  axis.title.y.left,  
+  axis.title.y.right,  
+  axis.text,  
+  axis.text.x,  
+  axis.text.x.top,  
+  axis.text.x.bottom,  
+  axis.text.y,  
+  axis.text.y.left,  
+  axis.text.y.right,  
+  axis.ticks,  
+  axis.ticks.x,  
+  axis.ticks.x.top,  
+  axis.ticks.x.bottom,    
+  axis.ticks.y,  
+  axis.ticks.y.left,  
+  axis.ticks.y.right,  
+  axis.ticks.length,  
+  axis.ticks.length.x,  
+  axis.ticks.length.x.top,  
+  axis.ticks.length.x.bottom,  
+  axis.ticks.length.y,  
+  axis.ticks.length.y.left,  
+  axis.ticks.length.y.right,  
+  axis.line,  
+  axis.line.x,  
+  axis.line.x.top,  
+  axis.line.x.bottom,  
+  axis.line.y,  
+  axis.line.y.left,  
+  axis.line.y.right,  
+  legend.background,  
+  legend.margin,  
+  legend.spacing,  
+  legend.spacing.x,  
+  legend.spacing.y,  
+  legend.key,  
+  legend.key.size,  
+  legend.key.height,  
+  legend.key.width,  
+  legend.text,  
+  legend.text.align,  
+  legend.title,  
+  legend.title.align,  
+  legend.position,  
+  legend.direction,  
+  legend.justification,  
+  legend.box,  
+  legend.box.just,  
+  legend.box.margin,  
+  legend.box.background,  
+  legend.box.spacing,  
+  panel.background,  
+  panel.border,  
+  panel.spacing,  
+  panel.spacing.x,  
+  panel.spacing.y,    
+  panel.grid,  
+  panel.grid.major,  
+  panel.grid.minor,  
+  panel.grid.major.x,  
+  panel.grid.major.y,  
+  panel.grid.minor.x,  
+  panel.grid.minor.y,  
+  panel.ontop,  
+  plot.background,  
+  plot.title,  
+  plot.title.position,  
+  plot.subtitle,  
+  plot.caption,  
+  plot.caption.position,  
+  plot.tag,  
+  plot.tag.position,  
+  plot.margin,  
+  strip.background,  
+  strip.background.x,  
+  strip.background.y,  
+  strip.placement,  
+  strip.text,  
+  strip.text.x,  
+  strip.text.y,  
+  strip.switch.pad.grid,  
+  strip.switch.pad.wrap,  
+  ...,
+  complete = FALSE,  
+  validate = TRUE)    
+
+根据作用对象，参数包括以下方面：  
+
+- axis.xxxx类，针对图形坐标轴，常见的有。  
+axis.ticks = element_line()  坐标轴刻度；  
+axis.title = element_text()  坐标轴标题；  	
+axis.text = element_text()  坐标轴标签；  
+axis.line = element_line()  直线和坐标轴；  
+
+- legend.xxxx类，针对图形图例，常见的有。  
+legend.background = element_rect() 图例背景；  
+legend.key = element_rect()  图例符号；  
+legend.text = element_text()  图例标签；  
+legend.title = element_text()   Legend title；  
+legend.margin = margin()  图例边距；  
+legend.position = “top”, “bottom”, “left”, “right” 图例位置。  
+
+- panel.xxxx类，针对图形面板，常见的有。  
+panel.background = element_rect() 面板背景；  
+panel.grid = element_line()  面板网格线；  
+panel.border = element_rect()  面板边界。    
+
+- plot.xxxx类，针对图形整体，常见的有。    
+plot.background = element_rect()  整个图形背景；  
+plot.title = element_text()  图形标题；  
+plot.margin = margin()  图形边距。     
+
+- strip.xxxx类，针对图形分面，常见的有。  
+strip.background = element_rect()  分面标签背景；  
+strip.text = element_text()  条带文本；  
+panel.spacing = unit()  分面间隔。
+  
+
+ggplot2主题系统的主要对象包括文本、线条和矩形，对应的函数有element_text()、element_line()、element_rect()、element_blank()。    
+
+- element_text()：图形文本调节，包括图形、轴、 Legend title和标签等，可控制图形标题或标签字的family，face，colour，size，hjust，vjust，angle，lineheight。ggplot2成图默认基础字体大小指的是轴标题大小，图形标题比它大20%，轴标签比它小20%。  
+plot.title 图形标题；  
+axis.title 轴标题；  
+axis.text 轴标签；  
+legend.text 轴标签。
+
+```{r}
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  labs(title = "This is title") +
+  theme(
+    plot.title = element_text(size = 20, color = "red", face = "italic", family = "serif", hjust = 0.5, vjust = 0.5, angle = 10),
+    axis.title = element_text(colour = "blue"),
+    axis.text = element_text(color = "green"),
+    legend.text = element_text(color = "orange")
+  ) # 图形文本元素修改。
+```
+
+- element_line()：绘制线条或线段，可控制fill，colour，size，linetype。   
+panel.grid.major 控制主网格线；  
+panel.grid.minor 控制次要网格线；  
+panel.grid.major.x or y 控制主网格线水平或垂直参数。  
+axis.line 调节轴线参数；  
+axis.ticks 调节轴刻度参数。  
+
+```{r}
+ggplot(data1, aes(v1, v2)) +
+  geom_point() +
+  theme(
+    panel.grid.major = element_line(size = 1, color = "blue", linetype = "dotted"),
+    panel.grid.minor = element_line(size = 1, color = "green", linetype = "dotted"),
+    axis.line = element_line(size = 1, color = "red", linetype = "dashed"),
+    axis.ticks = element_line(size = 3, color = "purple")
+  ) # 图形主题线元素修改。
+ggplot(data1, aes(v1, v2)) +
+  geom_point() +
+  theme(panel.grid.minor.x = element_line(size = 1, color = "green", linetype = "dotted")) # 主网格线垂直线参数设定。
+ggplot(data1, aes(v1, v2)) +
+  geom_point() +
+  theme(panel.grid.major.y = element_line(size = 1, color = "blue", linetype = "dotted")) # 主网格线水平线参数设定。
+ggplot(data1, aes(v1, v2)) +
+  geom_point() +
+  theme(panel.grid.minor.x = element_line(size = 1, color = "blue", linetype = "dotted")) # 次要网格线垂直线参数设定。
+ggplot(data1, aes(v1, v2)) +
+  geom_point() +
+  theme(panel.grid.minor.y = element_line(size = 1, color = "blue", linetype = "dotted")) # 次要网格线水平线参数设定。
+```
+
+- element_rect()：绘制供背景使用的矩形。可控制fill，colour，size，linetype。  
+plot.background 图形背景；  
+plot.margin 图形边界；  
+panel.background 面板背景；  
+panel.border 面板边界；  
+legend.background  图例背景；  
+legend.margin 图例边界。  
+
+```{r}
+ggplot(data1, aes(v1, v2, colour = nitrogen)) +
+  geom_point() +
+  theme(
+    plot.background = element_rect(fill = "pink", size = 1, color = "blue", linetype = "dotted"),
+    panel.background = element_rect(fill = "lightblue", size = 1, color = "red", linetype = "dashed"),
+    legend.background = element_rect(fill = "brown", linetype = "dotted"),
+    plot.margin = margin(t = 10, r = 20, b = 10, l = 20, unit = "pt"),
+    legend.margin = margin(t = 10, r = 20, b = 10, l = 20, unit = "pt")
+  ) # 图形背景矩形主题元素修改。plot.background针对整个图形背景，panel.background针对图形面板。
+```
+
+- element_blank()：表示空主题，即对元素不分配相应的绘图空间。colour=NA，fill=NA虽可删除绘图元素，但仍占绘图空间。  
+```{r}
+ggplot(data1, aes(v1, v2)) +
+  geom_point() +
+  theme(
+    panel.grid = element_blank(),
+    axis.title.x = element_blank(),
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black")
+  ) # 图形主题元素删除。panel.grid去除了图形背景，axis.title.x去除了x轴标题。
+```
+
+下面列出《R数据可视化手册》一书中关于主题设置的总结表格。  
+
+![](D:/Rwd/Tidyverse study note/7.4.1.png)
+![](D:/Rwd/Tidyverse study note/7.4.2.png)
+![](D:/Rwd/Tidyverse study note/7.4.3.png)
+
+下面，自己构造一个主题mytheme，小试牛刀一下。使用自定义主题的好处是，以后使用ggplot2绘制图形时可方便、快捷地将自定义的主题应用到绘制的图形中。      
+
+```{r}
+mytheme <- theme_bw() +
+  theme(
+    plot.title = element_text(size = 20, color = "red", face = "italic", family = "serif", hjust = 0.5, vjust = 0.5),
+    axis.title = element_text(size = 15, color = "blue", face = "bold", family = "serif"),
+    axis.text = element_text(size = 10, color = "green", face = "italic", family = "serif")
+  ) +
+  theme(panel.grid = element_blank()) +
+  theme(panel.background = element_rect(fill = "lightblue")) # 自定义主题mytheme。
+ggplot(data1, aes(x = nitrogen, y = v1, fill = nitrogen)) +
+  geom_boxplot() +
+  labs(title = "Example plot") +
+  mytheme # 使用自定义主题。
+```
+
+## 7.5 位置调整(position adjustments)    
+
+针对同一图层中的元素位置进行微调即为位置调整，多见于处理离散型数据，连续型数据一般很少出现完全重叠的问题。在geom_xxx()函数中，参数position表示绘图数据系列的位置调整，默认为"identity"（无位置调整），这个参数在绘制柱形图和条形图系列时经常用到，用来绘制簇状柱形图、堆积柱形图和百分比堆积柱形图等。除过“identity”，还包括stack、fill、dodge、jitter对应的位置设置。 [<sup>33-36</sup>](#refer-anchor)   
+
+- position = position_identity()：identity，不做任何位置调整，将每个对象直接显示在图中。ggplot2绘制散点图和折线图默认为identity。     
+
+```{r}
+ggplot(data1, aes(x = v1, y = v2)) +
+  geom_point() +
+  geom_line() # 散点图和折线图默认identity。
+ggplot(data1, aes(x = nitrogen, y = v2)) +
+  geom_bar(stat = "identity", position = position_identity()) # 柱状图，identity，不进行位置调整，绘制柱状图时，指定了stat = "identity"时，y值才能显示对应原始数据绝对值。
+ggplot(data1, aes(x = nitrogen, y = v2)) +
+  geom_bar(stat = "identity", position = "identity") # 结果同上。
+ggplot(data1, aes(x = nitrogen, y = v2)) +
+  geom_col(position = "identity") # 结果同上。
+```
+
+对于多分类柱状图，序列间会存在重叠(因为在identity设置下，实际上每个分组内的序列图柱都是从0开始绘制，因此会造成重叠)，为了让重叠部分能够显示出来，我们可以设置alpha参数为一个较小的数，从而使得条形略微透明；或者设定 fill = NA，让条形完全透明。    
+
+```{r}
+ggplot(data1, aes(x = nitrogen, y = v2, fill = variety)) +
+  geom_bar(stat = "identity", position = position_identity(), width = 0.5, colour = "black") # 柱状图，identity不调整。
+ggplot(data1, aes(x = nitrogen, y = v2, fill = variety)) +
+  geom_bar(stat = "identity", position = position_identity(), width = 0.5, alpha = 0.2, colour = "black") # 设置alpha = 0.2，让分组数据内序列间重叠部分显示出来。
+ggplot(data1, aes(x = nitrogen, y = v2, fill = variety)) +
+  geom_bar(stat = "identity", position = position_identity(), width = 0.5, fill = NA, colour = "black") # 设置fill = NA，让分组数据内序列间重叠部分显示出来。
+```
+
+
+- position = position_stack()：stack，垂直堆叠放置，对于分类柱状图，每个分类内的序列的图柱都是一个堆叠在另一个上面，图柱的高度代表此分类数据绝对值；柱形图和面积图的位置默认参数是stack。  
+position_stack(vjust = 1, reverse = FALSE)    
+vjust用于调节点或线垂直方向移动幅度。reverse若为TRUE，则会翻转堆叠顺序。
+
+```{r}
+ggplot(data1, aes(x = nitrogen, y = v2, fill = variety)) +
+  geom_bar(stat = "identity", position = "stack") # 柱状图，stack，垂直堆叠放置，y值对应数据绝对值。
+ggplot(data1, aes(x = nitrogen, y = v2, colour = variety)) +
+  geom_point() # 基础散点图。
+ggplot(data1, aes(x = nitrogen, y = v2, colour = variety)) +
+  geom_point(position = "stack") # 散点图，让点按分类堆叠。
+ggplot(data1, aes(x = nitrogen, y = v2, colour = variety)) +
+  geom_point(position = position_stack(vjust = 3)) # 散点图，stack，垂直堆叠放置，vjust参数调节。
+ggplot(data1, aes(x = nitrogen, y = v2, colour = variety)) +
+  geom_point(position = position_stack(reverse = T)) # 柱状图，stack，reverse = T。可以看出氮水平对应的分组变量数据的y值上下对调了。
+```
+
+- position = position_fill()：fill，垂直堆叠放置，但每组堆叠条形具有同样的高度（将高度标准化为1），因此这种条形图可以非常轻松地比较各组间的比例，对应图形有百分比堆积面积图，百分比堆积柱形图等。   
+position_fill(vjust = 1, reverse = FALSE)    
+vjust用于调节点线垂直方向移动幅度。reverse若为TRUE，则会翻转堆叠顺序。
+
+```{r}
+ggplot(data1, aes(x = nitrogen, y = v2, fill = variety)) +
+  geom_bar(stat = "identity") # 基础柱状图。
+ggplot(data1, aes(x = nitrogen, y = v2, fill = variety)) +
+  geom_bar(stat = "identity", position = position_fill(), width = 0.5) # 柱状图，fill，垂直堆叠放置，y值对应百分比，图柱高均是1，里面variety水平用不同的颜色标识，图柱一个堆叠一个，每个图柱的高度代表这一nitrogen水平下对应variety水平的数据占总数据的百分比。
+ggplot(data1, aes(x = nitrogen, y = v2, colour = variety)) +
+  geom_point() # 基础散点图。
+ggplot(data1, aes(x = nitrogen, y = v2, colour = variety)) +
+  geom_point(position = position_fill()) # 点图，position_fill()。
+ggplot(data1, aes(x = nitrogen, y = v2, colour = variety)) +
+  geom_point(position = position_fill(vjust = 5)) # 点图，position_fill()，vjust参数调整。
+ggplot(data1, aes(x = nitrogen, y = v2, colour = variety)) +
+  geom_point(position = position_fill(reverse = T)) # 点图，position_fill()，vjust参数调整。
+```
+
+- position = position_dodge()：dodge，避免重叠，并排放置，将每组中的条形依次并列放置，这样可以非常轻松地比较每个条形表示的具体数值，对应图形有簇状柱形图。   
+position_dodge(width = NULL, preserve = c("total", "single"))
+
+position_dodge2()是position_dodge()的升级版。  
+position_dodge2(width = NULL, preserve = c("total", "single"), padding = 0.1, reverse = FALSE) 
+
+width：调节组距。position_dodge()中width调节的是组别并排之间的距离，默认值是0.9，当width大于0.9时后一组别向右偏移设定的幅度，小于0.9时，向左偏移设定的幅度。    
+preserve：调节并排后图形要素宽度。preserve ="total"表示各组的图形要素总宽度相等；preserve ="single"表示组间各单个图形要素的宽度相等。   
+padding：图柱间间距调节，默认为0.1，最大值取1。  
+reverse：是否翻转数据顺序。  
+
+```{r}
+ggplot(data1, aes(x = nitrogen, y = v2, fill = variety)) +
+  geom_col(position = "dodge") # 柱状图，dodge，按variety分组并排放置。
+ggplot(data1, aes(x = nitrogen, y = v2, fill = variety)) +
+  geom_col(position = position_dodge2()) # 柱状图，dodge2，按variety分组并排放置。
+```
+
+dodge和dodge2的区别dodge2添加了组内间隔。那么为什么上面后一张图变了呢，我想是因为我用原始数据进行的绘图。下面看看数据求得平均值后的结果。  
+```{r}
+data1 %>%
+  group_by(variety, nitrogen) %>%
+  summarise(mean_v = mean(v1)) %>%
+  ggplot(aes(x = nitrogen, y = mean_v, fill = variety)) +
+  geom_bar(stat = "identity", position = position_dodge()) # dodge。
+data1 %>%
+  group_by(variety, nitrogen) %>%
+  summarise(mean_v = mean(v1)) %>%
+  ggplot(aes(x = nitrogen, y = mean_v, fill = variety)) +
+  geom_bar(stat = "identity", position = position_dodge2()) # dodge2。结果同上，区别在于组别间有了分隔。
+data1 %>%
+  group_by(variety, nitrogen) %>%
+  summarise(mean_v = mean(v1)) %>%
+  ggplot(aes(x = nitrogen, y = mean_v, fill = variety)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.5)) # width小于0.9，图柱重叠。
+data1 %>%
+  group_by(variety, nitrogen) %>%
+  summarise(mean_v = mean(v1)) %>%
+  ggplot(aes(x = nitrogen, y = mean_v, fill = variety)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 1.2)) # width大于1.2，图柱有间距,因为width调节的是组间间距，因此b组整体向右偏移了1.2，但因为图柱宽度较宽，与a组的图柱有重叠。
+data1 %>%
+  group_by(variety, nitrogen) %>%
+  summarise(mean_v = mean(v1)) %>%
+  ggplot(aes(x = nitrogen, y = mean_v, fill = variety)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 1.2), width = 0.5) # 改变图柱宽度看看，可以看出dodge中的width调节组间间距，bar函数中的width调节图柱宽度。
+data1 %>%
+  group_by(variety, nitrogen) %>%
+  summarise(mean_v = mean(v1)) %>%
+  ggplot(aes(x = nitrogen, y = mean_v, fill = variety)) +
+  geom_bar(stat = "identity", position = position_dodge2(padding = 0)) # padding取值等于0，图柱无间距，刚好挨着。
+data1 %>%
+  group_by(variety, nitrogen) %>%
+  summarise(mean_v = mean(v1)) %>%
+  ggplot(aes(x = nitrogen, y = mean_v, fill = variety)) +
+  geom_bar(stat = "identity", position = position_dodge2(padding = 0.7)) # padding取值大于0，图柱有间距，取值越大，间距越大，但是最大值只能取到1。
+data1 %>%
+  group_by(variety, nitrogen) %>%
+  summarise(mean_v = mean(v1)) %>%
+  ggplot(aes(x = nitrogen, y = mean_v, fill = variety)) +
+  geom_bar(stat = "identity", position = position_dodge2(padding = -0.7)) # padding取值小于0，图柱重叠。
+ggplot(mtcars, aes(x = factor(carb))) +
+  geom_bar(aes(fill = factor(vs)), position = position_dodge2(preserve = "total")) # 以自带数据集mtcars为例，preserve = total。
+ggplot(mtcars, aes(x = factor(carb))) +
+  geom_bar(aes(fill = factor(vs)), position = position_dodge2(preserve = "single")) # preserve = single。
+```
+
+
+- position = position_jitter()：给点添加抖动，避免重合。  
+position_jitter(width = NULL, height = NULL, seed = NA)  
+width调节水平方向抖动幅度，height调节垂直方向抖动幅度；jitterdodge可实现抖动和并排的同时调节。position_jitterdodge(jitter.width = NULL, jitter.height = 0, dodge.width = 0.75, seed = NA)，同样地，jitter.width是x方向抖动幅度，默认值为0.4，jitter.height为y轴方向抖动幅度，默认为0，dodge.width为x轴方式并排间距，默认为0.75。   
+```{r}
+ggplot(data1, aes(x = nitrogen, y = v2)) +
+  geom_boxplot() +
+  geom_point() # 绘制基本散点图结合箱线图。
+ggplot(data1, aes(x = nitrogen, y = v2)) +
+  geom_boxplot() +
+  geom_point(position = position_jitter()) # 抖动调整。
+ggplot(data1, aes(x = nitrogen, y = v2)) +
+  geom_boxplot() +
+  geom_point(position = "jitter") # 结果同上。
+ggplot(data1, aes(x = nitrogen, y = v2)) +
+  geom_boxplot() +
+  geom_point(position = position_jitter(width = 0.1, height = 0.1)) # 调整抖动幅度。
+ggplot(data1, aes(x = nitrogen, y = v2, fill = variety, colour = variety)) +
+  geom_boxplot() +
+  geom_point(position = position_jitterdodge(dodge.width = 0.1)) # 同时调整箱型图和抖动散点图的间距。
+ggplot(data1, aes(x = nitrogen, y = v2, fill = variety, colour = variety)) +
+  geom_boxplot() +
+  geom_point(position = position_jitterdodge(dodge.width = 0.8)) # 同时调整箱型图和抖动散点图的间距。
+ggplot(data1, aes(x = nitrogen, y = v2, fill = variety, colour = variety)) +
+  geom_boxplot() +
+  geom_point(position = position_jitterdodge(jitter.height = 4, jitter.width = 0.2, dodge.width = 1)) # 参数调整。
+```
+
+- position = positon_nudge()：position_nudge(x = 0, y = 0)  
+x和y用于指定在x或y方向上的平移量。  
+
+```{r}
+ggplot(data1, aes(x = v1, y = v2, colour = variety)) +
+  geom_point() +
+  xlim(c(0, 4)) # 散点图。
+ggplot(data1, aes(x = v1, y = v2, colour = variety)) +
+  geom_point(position = position_nudge(x = 2)) +
+  xlim(c(0, 4)) # x方向整体位移2个单位。
+```
+
+
+## 7.6 统计变换(stats)   
+
+统计变换(statistical transformation, stat)：即绘图时以某种方式对数据信息进行汇总，用来计算新数据的算法。 统计变换可将输入的数据看作输入，将返回的数据作为输出。   
+每个几何对象函数都有一个默认统计变换，每个统计变换函数都有一个默认几何对象。 geom_bar()函数的统计变换默认是计数(count)，当我们从计数(count)修改为标识(identity)后。就可以将条形的高度映射为 y轴变量的初始值。
+stat_summary() 可将统计变换聚焦到统计摘要。   
+大部分情况下，stat和geom之间是相互可以转换的。    
+
+![](D:/Rwd/Tidyverse study note/7.6.1.png)
+
+```{r}
+data1 <- read_csv(file = "data1.csv") # 导入数据data1.
+ggplot(data1, aes(x = nitrogen)) +
+  geom_bar(fill = "blue") # geom_bar()函数中默认stat = "count"。这里数据集data1中nitrogen的四个水平数据个数一样，所以图柱一样高。
+ggplot(data1, aes(x = nitrogen)) +
+  stat_count() # 图形结果同上。这里直接用stat_count()函数进行了统计变换。
+```
+
+再来看以下的区别。geom_bar()默认stat=count，图柱高对应的值是数据频数，可以设置stat=identity使得图柱高对应的值为数据实际值。而geom_col()默认的stat=identity，因此图形图柱高对应的值即为实际值。    
+```{r}
+ggplot(data1, aes(x = nitrogen, y = v1)) +
+  geom_bar(stat = "identity") # geom_bar绘制柱状图。
+ggplot(data1, aes(x = nitrogen, y = v1)) +
+  geom_col(fill = "red") # geom_col绘制柱状图。
+```
+
+然而，stat = "identity"反映的数据值还是对应变量水平数据的叠加，可以通过以下方式查看实际数据情况。  
+
+```{r}
+ggplot(data1, aes(x = nitrogen, y = v1, color = nitrogen)) +
+  geom_bar(stat = "identity", fill = NA) # 通过去除填充查看变量下实际数据情况。
+```
+
+我们作图时，往往是想要将统计结果直接反映到图中，如以分组变量的平均值绘制柱状图等。可以通过数据分组统计求得平均值后绘图，也可以通过stat_summary()函数绘制。
+
+```{r}
+ggplot(data1, aes(x = nitrogen, y = v1, colour = nitrogen)) +
+  geom_point() # 散点图。
+ggplot(data1, aes(x = nitrogen, y = v1, colour = nitrogen)) +
+  stat_summary() # 统计变换散点图。
+ggplot(data1, aes(nitrogen, v1, colour = nitrogen)) +
+  geom_point() +
+  stat_summary(fun = "mean", color = "red", size = 3, geom = "point") # 对y统计分组并作图。
+```
+
+一一尝试一下常见的统计变换。   
+```{r}
+ggplot(data1, aes(x = v1)) +
+  geom_bar() # 柱状图，对观测值进行计数。
+ggplot(data1, aes(x = v1)) +
+  stat_count() # 同上。
+ggplot(data1, aes(sample = v1)) +
+  geom_qq() # qq图。
+ggplot(data1, aes(sample = v1)) +
+  stat_qq() # 同上。
+ggplot(data1, aes(x = v1)) +
+  geom_histogram() # 频数直方图。
+ggplot(data1, aes(x = v1)) +
+  stat_bin() # 同上。
+ggplot(data1, aes(x = nitrogen, y = v1)) +
+  geom_boxplot() # 箱线图。
+ggplot(data1, aes(x = nitrogen, y = v1)) +
+  stat_boxplot() # 同上。
+ggplot(data1, aes(x = v1)) +
+  geom_density() # 密度图。
+ggplot(data1, aes(x = v1)) +
+  stat_density() # 同上。
+ggplot(data1, aes(x = v1, y = v2)) +
+  geom_density2d() # 二维密度图。
+ggplot(data1, aes(x = v1, y = v2)) +
+  stat_density_2d() # 同上。
+ggplot(data1, aes(x = v1, y = v2)) +
+  geom_smooth() # 添加平滑曲线。
+ggplot(data1, aes(x = v1, y = v2)) +
+  stat_smooth() # 同上。
+```
+
+## 7.7 分面(facet)   
+
+分面：显示数据子集的子图。 
+ggplot2提供了两个分面函数，facet_grid()和facet_wrap()。两者的区别在子图布局上。  
+
+**facet_grid()**  
+
+facet_grid()：网格型分面，通过两个变量对图进行分面；生成一个二维分面图矩阵，矩阵的行列是通过变量来定义，比如表达式A~B，则分组变量A指定水平方向子面板，B指定垂直方向子面板。  
+常见表达：  
+.~变量 基于变量将子图垂直排列，从左至右。  
+变量~. 基于变量将子图水平排列，从上至下。  
+变量1~变量2 基于变量1将子图水平排列，从上至下为变量1分类水平，基于变量2将子图垂直排列，从左至右为变量2分类水平。  
+facet_grid(
+  rows = NULL,
+  cols = NULL,
+  scales = "fixed",
+  space = "fixed",
+  shrink = TRUE,
+  labeller = "label_value",
+  as.table = TRUE,
+  switch = NULL,
+  drop = TRUE,
+  margins = FALSE,
+  facets = NULL
+)  
+
+```{r}
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_grid(. ~ nitrogen) # 一行多列，共有y轴，以nitrogen分组，水平排列（即，组别从左向右排列）
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_grid(cols = vars(nitrogen)) # 同上。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_grid(nitrogen ~ .) # 一列多行，共有x轴，以nitrogen分组，垂直排列（即，组别从上向下排列）
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_grid(rows = vars(nitrogen)) # 同上。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_grid(nitrogen ~ variety) # 多行多列，以nitrogen和variety分组生成分面矩阵，nitrogen组别从上向下排列，variety组别从左向右排列。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_grid(nitrogen ~ variety + year) # nitrogen，variety和year三个分组。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_grid(nitrogen ~ year, scales = "free_x") # x坐标调整成不同的取值范围。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_grid(nitrogen ~ year, scales = "free_y") # y坐标调整成不同的取值范围。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_grid(nitrogen ~ year, scales = "free") # 坐标调整成不同的取值范围。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_grid(nitrogen ~ year, margins = "nitrogen") # 以nitrogen添加边际汇总。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_grid(nitrogen ~ year, margins = "year") # 以year添加边际汇总。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_grid(nitrogen ~ year, margins = TRUE) # 　添加边际图。同时添加行和列的边际图。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_grid(nitrogen ~ year + variety, as.table = FALSE) # 改变变量nitrogen分组水平最大值至右上。
+```
+
+**facet_warp()**   
+
+facet_wrap()：封装型分面，通过单个变量对图进行分面，先生成一个一维面板条块，在封装到二维中。 基本表达式为~变量，表示基于变量进行封装，先第一行从左至右，再第二行从左至右。  
+facet_wrap(
+  facets,
+  nrow = NULL,
+  ncol = NULL,
+  scales = "fixed",
+  shrink = TRUE,
+  labeller = "label_value",
+  as.table = TRUE,
+  switch = NULL,
+  drop = TRUE,
+  dir = "h",
+  strip.position = "top"
+)
+
+```{r}
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_wrap(~nitrogen) # 按照nitrogen进行分面，面板是按照子图顺序排序，即第一行开始依次填充。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_wrap(~ year + nitrogen) # 双变量分面。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_wrap(~ year + nitrogen, nrow = 2) # 修改行数为2行。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_wrap(~ year + nitrogen, ncol = 2) # 修改列数为2列。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_wrap(~ year + nitrogen, ncol = 2, scales = "free_y") # free_y参数可将子图中的y轴调整成不同的取值范围。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_wrap(~ year + nitrogen, ncol = 2, scales = "free_x") # free_x参数可将子图中的x轴调整成不同的取值范围。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_wrap(~ year + nitrogen, ncol = 2, scales = "free") # free参数可将子图中的x和y轴均调整成不同的取值范围。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_wrap(~ year + nitrogen, labeller = "label_both") # 给分面标题添加变量名称。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_wrap(~ year + nitrogen, strip.position = "right") # 改变分面标题位置，strip.position可取值top，bottom，left和right.
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_wrap(~ year + nitrogen, dir = "v") # 改变排列方式为垂直，dir取值默认为水平"h",还可取值垂直"v"。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_wrap(~nitrogen, as.table = FALSE) # as.table默认TRUE，变量水平最大值在右下，而改为FALSE，变量水平最大值在右上。
+```
+
+**分面标签外观改变**  
+
+```{r}
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_wrap(~nitrogen, scales = "free") +
+  theme(strip.text = element_text(face = "bold")) # 通过them中的strip.text设置分面子图中标题字体。这里设置了字体加粗。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_wrap(~nitrogen, scales = "free") +
+  theme(strip.text = element_text(face = "bold", size = rel(2))) # size = rel(2)使得字体大小变为主题基本字体大小的2倍。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_wrap(~nitrogen, scales = "free") +
+  theme(strip.text = element_text(face = "bold.italic", family = "serif", color = "red", size = rel(2))) # 字体设置，bold.italic设置了粗斜体，serif设置了用新罗马字体，设置字体颜色为红色，rel设置字体大小为2倍。
+ggplot(data1, aes(v1, v2, color = nitrogen)) +
+  geom_point() +
+  facet_wrap(~nitrogen, scales = "free") +
+  theme(
+    strip.text = element_text(face = "bold"),
+    strip.background = element_rect(
+      fill = "green",
+      colour = "black", size = 1
+    )
+  ) # 改变标题样式。
+```
+
+
+## 7.8 坐标系(coord)   
+
+R语言默认坐标系为笛卡尔坐标系。可通过x坐标和y坐标找到每个数据点。
+
+coord_flip()：横纵坐标位置转换，默认作图是x轴为横轴，y轴为纵轴，此函数实现x轴和y轴交换。
+coord_polar(theta = "x", start = 0, direction = 1)：转换为极坐标系（条形图转为极坐标后会变为饼图）。theta 可以选择x或y，表示外延的坐标，start是坐标开始的角度，默认其实位置是12点钟。direction 表示数据的方向，1是顺时针，-1为逆时针。  
+coord_fixed()：图形伸缩变换，不会改变图形比例，是整体按照设定的比例进行缩放。默认y轴与x轴比例ratio=1.
+coord_cartesian(xlim = NULL, ylim = NULL)：指定参数则控制图形特定区域放大显示。参数xlim和ylim用于x和y数据范围限定。  
+coord_map()： 将地图变成球状展示。
+coord_trans(x = "identity", y = "identity", limx = NULL, limy = NULL)：转化数据。包括对数转换，平方根转换等，这里x和y的值可以是log10,log2或squal等，另外两个参数也是限定坐标范围。  
+coord_equal(ratio = 1, ...)：使用这个函数后，x轴和y轴坐标会被转换成相等形式，此时图形会产生较大的缩放，radio可以进一步调整缩放比例（x和y的比值）
+
+
+```{r}
+p5 <- ggplot(data1, aes(x = nitrogen, y = v2, fill = nitrogen)) +
+  geom_col() # 绘制基础图。
+p5 # 显示图形。
+p5 + coord_flip() # 交换x轴和y轴。
+p5 + coord_polar() # 转换为极坐标系。
+p5 + coord_polar(theta = "y") # y轴外延。
+p5 + coord_polar(start = 90) # 起点旋转了90度。
+p5 + coord_polar(direction = -1) # 逆时针旋转。
+p5 + coord_fixed() # 不指定参数，则默认为ratio为1：1。
+p5 + coord_fixed(ratio = 1 / 80) # ratio=1/80, 即y轴1单位，x轴为80。
+p5 + coord_cartesian(xlim = c(0, 1.5)) # 将x轴的取值范围限定在了0到1.5。
+p5 + coord_cartesian(ylim = c(0, 40)) # 将y轴的取值范围限定在了0到40。
+p5 + coord_trans(y = "sqrt") # y坐标值均取平方根后绘图。
+p5 + coord_equal(ratio = 1) # coord_equal()。
+library(maps)
+ggplot(map_data("world"), aes(long, lat, group = group)) +
+  geom_polygon(fill = "white", color = "black") # 绘制世界地图。
+ggplot(map_data("world"), aes(long, lat, group = group)) +
+  geom_polygon(fill = "white", color = "black") +
+  coord_quickmap() # coord_quickmap()调整地图纵横比。
+ggplot(map_data("world"), aes(long, lat, group = group)) +
+  geom_polygon(fill = "white", color = "black") +
+  coord_quickmap() +
+  coord_polar() # 将地图变为球形。
+```
+
+## 7.9 输出(output)   
+ 
+方式1：使用tiff()、pdf()、svg()、png()、win.metafile()、等函数打开图形设备，绘制图形，然后用dev.off()关闭图形设备。   
+
+以上输出图形函数常见参数有。  
+width：输出图形的宽度；  
+height：输出图形的高度；  
+units：输出图形长度单位，默认为px(像素)，其他还有in(英寸)，cm(厘米)，mm(毫米)；  
+pointsize：图形上文字的大小；默认为12；  
+compression：设置图形输出的压缩类型，选项有"none"，"rle"，"lzw"，"jpeg"，"zip"，"lzw+p"；输出tiff格式选择"lzw"；  
+bg：输出图形背景颜色；  
+res：输出图形的分辨率；默认72ppi；  
+family：输出图形字体；
+
+以输出tiff格式图片为例。  
+```{r}
+tiff("plot1.tiff", bg = "green", width = 10, height = 18, units = "cm", pointsize = 18, res = 600, family = "serif") # 开启图形设备。
+plot(1:10) # 绘制要输出的图形。
+dev.off() # 关闭图形设备。
+```
+
+输出pdf格式图形。  
+
+```{r}
+library(tidyverse) # 调用tidyverse包。
+pdf("plot1.pdf", width = 4, height = 4) # 打开pdf图形设备。
+ggplot(data1, aes(v1, v2)) +
+  geom_point() # 绘制图形。
+dev.off() # 关闭图形设备。
+```
+
+
+方式2：ggplot2绘制的图形，可使用ggsave()保存pdf、svg、png、tiff等格式的文件。  
+ggsave(
+  filename,
+  plot = last_plot(),
+  device = NULL,
+  path = NULL,
+  scale = 1,
+  width = NA,
+  height = NA,
+  units = c("in", "cm", "mm", "px"),
+  dpi = 300,
+  limitsize = TRUE,
+  bg = NULL,
+  ...
+)    
+filename：设置保存图片的格式和文件名，格式包括pdf,tiff,png,jpeg等。  
+plot = last_plot()：默认保存最后创建的图形；  
+path：图形保存路径设置，默认保存在工作目录；  
+width,height,units:图形长宽及单位设置，单位有英寸in、厘米cm、毫米mm、像素px等；单位默认是英寸；  
+limitsize：逻辑选项，若为TRUE，则不会保存大于50*50英寸的图形；  
+bg：输出图形背景色。  
+
+```{r}
+ggplot(data1, aes(v1, v2)) +
+  geom_point() # 绘制图形。
+ggsave("plot2.pdf", width = 8, height = 4, units = "cm") # 输出pdf。
+ggsave("plot2.png", width = 8, height = 4, units = "cm") # 输出png。
+ggsave("plot2.tiff", width = 8, height = 4, units = "cm") # 输出tiff。
+```
+
+方式3：Rstudio-Export-save as pdf...或者save as image...-设置保存的参数（图形尺寸，存放路径，文件名）-save。
+
+方式4：eoffice包图形导出到PPT。导出的图形在ppt中是可编辑的，且每个图形要素都是可编辑的。     
+
+```{r}
+library(ggplot2) # 调用ggplot2包。
+library(eoffice) # 调用eoffice包。
+ggplot(data1, aes(x = v1, y = v2, colour = nitrogen)) +
+  geom_point() # 绘制图形。
+topptx(filename = "plot.pptx") # 导出图形到ppt。
+```
+
+
+# 8 常见图形绘制  
+
+## 8.1 散点图(Scatterplot)   
+
+### 8.1.1 认识散点图
+
+散点图，又名点图、散布图、X-Y图，英文Scatter plot或Scatter gram。  
+散点图在直角坐标系平面上表示两个连续型变量（因变量y，自变量x）间的关系。散点图将序列显示为一组点，值由点在图表中的位置表示，类别由图表中的不同标记表示。散点图通常用于比较不同类别的聚合数据，选择合适的函数对数据点进行拟合，分析数据的分布和变化趋势。      
+
+散点图可提供的相关信息：  
+- 变量之间是否存在数量关联趋势；  
+  若不相关，数据点随机分布成离散的点。若相关，大部分数据点会相对密集并以某种趋势呈现。  
+- 如果存在关联趋势，那么是线性还是非线性； 
+  相关关系类型包括：正相关（两个变量值同时增加）、负相关（一个变量值增加另一个变量值下降）、无相关、线性相关、指数相关等。相关程度包括：强相关、弱相关和无相关等。 
+- 观察是否有离群值（那些离集群较远的点我们称为离群点或者异常点(outlier)），从而分析离群值对建模分析的影响。  
+
+![](D:/Rwd/Tidyverse study note/8.1.1.png) 
+针对数据的变量的个数，利用点图展示的类型也不一样，对于单变量数据，可以通过Q-Q图或P-P图展示数据的分布特征，对于两变量数据，可以通过散点图在笛卡尔坐标系展示数据特征，对于多个变量数据的，可通过散点图矩阵展示。
+
+散点图矩阵
+
+散点图矩阵是散点图的高维扩展，即将数据集中的数据变量两两绘制散点图，组成矩阵，散点图矩阵通过二维坐标系中的一组点来展示两个变量之间的关系，散点图矩阵就是将多维数据中的各个维度两两组合绘制成一系列的按规律排列的散点图。[<sup>37</sup>](#refer-anchor)  
+
+### 8.1.2 绘制散点图 
+
+**1、绘制基础散点图**
+
+**Base R**   
+
+plot(x, y = NULL, type = "p",  xlim = NULL, ylim = NULL,
+     log = "", main = NULL, sub = NULL, xlab = NULL, ylab = NULL,
+     ann = par("ann"), axes = TRUE, frame.plot = axes,
+     panel.first = NULL, panel.last = NULL, asp = NA,
+     xgap.axis = NA, ygap.axis = NA,
+     ...)
+
+```{r}
+plot(x = data1$v1, y = data1$v2) # 绘制基础图。
+plot(
+  x = data1$v1, y = data1$v2,
+  main = "This is an example of scatter",
+  sub = "This is subtitle",
+  xlab = "x", ylab = "y",
+  xlim = c(1, 1.6), ylim = c(1, 5),
+  pch = 20, type = "p", col = "red"
+) # 绘制散点图并进行参数调整。
+abline(lm(data1$v2 ~ data1$v1), col = "blue") # 添加线性拟合线。
+```
+
+散点图矩阵绘制   
+
+```{r}
+pairs(data1[5:6],
+  main = "Scatterplot Matrix of data1",
+  pch = 21,
+  bg = c("red", "blue")
+)
+```
+
+
+**car包scatterplot函数**  
+
+```{r}
+library(car) # 调用car包。
+scatterplot(v2 ~ v1 | nitrogen, data = data1) # 按nitrogen分组绘制散点图。
+scatterplotMatrix(~ v2 + v1 | nitrogen, data = data1) # 散点图矩阵。
+```
+
+**ggplot2**  
+
+```{r}
+ggplot(data1, aes(x = v1, y = v2)) +
+  geom_point() # 基本散点图绘制。
+ggplot(data1, aes(x = v1, y = v2)) +
+  geom_point() +
+  geom_smooth() # 基本散点图绘制，同时添加平滑曲线。
+ggplot(data1, aes(x = v1, y = v2, color = nitrogen)) +
+  geom_point() +
+  geom_smooth() # 分组添加平滑曲线。
+ggplot(data1, aes(x = v1, y = v2, color = nitrogen)) +
+  geom_point() +
+  geom_smooth(method = "lm") # 基本散点图绘制，同时添加线性拟合曲线。
+ggplot(data1, aes(x = v1, y = v2)) +
+  geom_point(aes(color = nitrogen)) +
+  geom_smooth(method = "lm") # 点分组，但是拟合不分组。
+ggplot(data1, aes(x = v1, y = v2, color = nitrogen)) +
+  geom_point() +
+  stat_ellipse() # stat_ellipse可查看点分布范围。
+ggplot(data1, aes(x = v1, y = v2, color = nitrogen)) +
+  geom_point() +
+  geom_rug() # geom_rug可添加边际地毯。
+ggplot(data1, aes(v1, v2)) +
+  geom_point() +
+  facet_wrap(~nitrogen) # 通过分面看各分类变量下关系。
+```
+
+**2、散点图矩阵绘制**
+
+```{r}
+library(lattice)
+splom(data1[5:6], groups = data1$nitrogen) # 通过lattice包绘制散点图矩阵。
+library(GGally)
+ggpairs(data1, columns = 5:6, aes(color = nitrogen)) # GGally包绘制散点图矩阵。
+```
+
+
+### 8.1.3 散点图常见操作  
+
+绘制基础图。
+```{r}
+ggplot(data1, aes(x = v1, y = v2)) +
+  geom_point() # 基础图形。
+```
+
+可以对点的形状shape，大小size，颜色colour进行调整。  
+shape：R语言中预设的点形状有25个。  
+![](D:/Rwd/Tidyverse study note/8.1.3.png) 
+*插图摘自《R可视化手册》*  
+也可以通过ggpubr包的show_point_shapes()函数查看。  
+size：系统默认的点大小为2。  
+colour：1-20点形的颜色都可由colour参数调整，21-25点形，边框线和实心区域的颜色分别由colour和fill参数来调整。  
+
+```{r}
+library(ggpubr) # 调用ggpubr包。
+show_point_shapes() # 显示点形状。
+ggplot(data1, aes(x = v1, y = v2)) +
+  geom_point(shape = 21, size = 3, colour = "red") # 对点形状，大小，颜色进行调整。
+ggplot(data1, aes(x = v1, y = v2)) +
+  geom_point(shape = 23, size = 3, colour = "red", fill = "blue") # 颜色调整。
+```
+
+可以通过颜色和形状进行分组数据的展示。散点图默认的点形状和颜色不满足自身需求时，可通过标度函数调整。  
+scale_shape_manual()：调整点形状;   scale_colour_manual()和scale_colour_brewer()：调整点颜色。  
+scale_fill_manual()：调整填充色。
+```{r}
+ggplot(data1, aes(x = v1, y = v2, shape = nitrogen, colour = nitrogen)) +
+  geom_point() # 形状和颜色数据分组。
+ggplot(data1, aes(x = v1, y = v2, shape = nitrogen, colour = nitrogen)) +
+  geom_point() +
+  scale_shape_manual(values = c(1, 2, 3, 4)) +
+  scale_color_manual(values = c("blue", "red", "black", "brown")) # 形状和颜色数据分组。
+```
+*注意：分组变量必须是分类变量，它必须是因子型或字符型的向量。*   
+
+
+基本散点图通过将两个连续型变量分别映射给x轴和y轴，当变量超过两个时，可以将变量映射给其他图形属性，如数据点的大小和颜色。  
+```{r}
+ggplot(data1, aes(x = v1, y = v2, size = v2, colour = v2)) +
+  geom_point()
+```
+
+数据点较多时，怎样避免重叠。  
+- 设置点的透明度；  
+- 设置数据分箱，用矩形或者六边形来表示；   
+  stat_bin2d()函数分别在x轴和y轴方向上将数据分割为30个组，总计900个箱子。bins=参数可调整分箱个数。  
+- 用箱线图表示。  
+```{r}
+ggplot(data1, aes(x = v1, y = v2)) +
+  geom_point(size = 5, alpha = 0.2) # 透明度调整。
+ggplot(data1, aes(x = v1, y = v2)) +
+  stat_bin2d() # 分箱。
+ggplot(data1, aes(x = v1, y = v2)) +
+  stat_bin2d(bins = 50) # 调整分箱个数。
+```
+
+当散点图的一个数据轴或者两个数据轴都对应离散型数据时，会出现图形重叠的情况，可以通过位置函数position_jitter()给数据点增加随机扰动。  
+```{r}
+ggplot(data1, aes(x = nitrogen, y = v2)) +
+  geom_point() # 基础图。
+ggplot(data1, aes(x = nitrogen, y = v2)) +
+  geom_point(position = position_jitter(width = 0.2)) # 增加扰动，避免重叠。
+```
+
+给散点图添加标签  
+```{r}
+ggplot(data1, aes(x = v1, y = v2)) +
+  geom_point() +
+  geom_text(aes(label = v2), size = 3, colour = "red", vjust = 1, hjust = 0.5) # 显示数据标签。
+```
+
+当我们将某一变量映射给size，即得到气泡图。  
+
+气泡图是一种多变量的统计图表，由笛卡尔坐标系（直角坐标系）和大小不一的圆组成，可以看作是散点图的变形。在气泡图中，一般情况下，每一个气泡都代表着一组三个维度的数据（v1，v2，v3）。其中两个决定了气泡在笛卡尔坐标系中的位置（即x，y轴上的值），另外一个则通过气泡的大小来表示。  
+气泡图通常用于展示和比较数据之间的关系和分布，通过比较气泡位置和大小来分析数据维度之间的相关性。也可以用作研究两个变量与时间变量的关系。[<sup>38</sup>](#refer-anchor)   
+
+```{r}
+ggplot(data1, aes(x = v1, y = v2, size = v2, colour = nitrogen)) +
+  geom_point(alpha = 0.5) +
+  scale_size_area(max_size = 12) # 气泡图。
+```
+
+
+如果x和y均为分类变量，气泡图反映了变量值。
+```{r}
+ggplot(data1, aes(x = nitrogen, y = variety, size = v2, colour = nitrogen)) +
+  geom_point(alpha = 0.5) +
+  scale_size_area(max_size = 12) # 分类变量气泡图。
+```
+
+
+增加回归模型拟合线。  
+geom_smooth()用于添加拟合线，不指定模型类型时，会对数据拟合loess曲线（局部加权多项式），默认情况下，添加的回归线会添加95%的置信域，level参数可调整置信水平，se = TRUE or FALSE可设置是否添加置信域。
+
+```{r}
+ggplot(data1, aes(x = v1, y = v2)) +
+  geom_point() +
+  geom_smooth(method = "lm") # 添加线性回归拟合线。
+ggplot(data1, aes(x = v1, y = v2)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) # 去除置信区间。
+```
+
+添加回归方程和统计量  
+
+```{r}
+model_lm <- lm(v2 ~ v1, data = data1)
+summary(model_lm)
+l <- list(
+  a = as.numeric(format(coef(model_lm)[1], digits = 4)),
+  b = as.numeric(format(coef(model_lm)[2], digits = 4)),
+  r2 = format(summary(model_lm)$r.squared, digits = 4),
+  p = format(summary(model_lm)$coefficients[2, 4], digits = 4)
+)
+
+eq <- substitute(italic(y) == b + a %.% italic(x) ~ "," ~ italic(R)^2 ~ "=" ~ r2 ~ "," ~ italic(P) ~ "=" ~ p, l)
+ggplot(data1, aes(x = v1, y = v2)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_text(aes(x = 1.1, y = 2, label = as.character(as.expression(eq))), parse = TRUE)
+```
+
+
+通过ggtrendline包添加回归方程和r2。
+
+```{r}
+library(ggtrendline)
+ggtrendline(data1$v1, data1$v2, model = "line2P") +
+  geom_point(aes(data1$v1, data1$v2))
+```
+
+通过ggpmisc包实现给分组数据添加拟合线和方程
+
+```{r}
+library(ggpmisc)
+library(ggplot2)
+ggplot(data1, aes(x = v1, y = v2, colour = nitrogen)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~~")),
+    formula = y ~ x,
+    parse = T,
+    label.x.npc = "left",
+    label.y.npc = "bottom",
+    size = 3
+  )
+```
+
+ggpubr包添加分组拟合公式
+
+```{r}
+library(ggpubr)
+ggscatter(data1,
+  x = "v1", y = "v2",
+  color = "nitrogen", palette = "jco",
+  add = "reg.line", conf.int = TRUE, digits = 2
+) +
+  stat_cor(aes(color = nitrogen), label.x = 1.1, label.y = c(0.5, 0.8, 1.1, 1.4)) +
+  stat_regline_equation(aes(color = nitrogen), label.x = 1, label.y = c(0.5, 0.8, 1.1, 1.4))
+```
+
+
+3D散点图绘制
+
+```{r}
+library(scatterplot3d)
+with(data1, scatterplot3d(
+  x = v1, y = v2, z = v2,
+  color = "blue",
+  pch = 18,
+  type = "h"
+))
+```
+
+
+
+## 8.2 相关系数图(correlation matrix)  
+### 8.2.1 认识相关系数图
+
+相关系数是最早由统计学家卡尔·皮尔逊设计的统计指标，是研究变量之间线性相关程度的量，一般用字母r表示。取值范围为[-1,1]，“(0,1]”为正相关，“[-1,0)”为负相关，“0”表示线性不相关。  
+研究两个变量间相关可以通过散点图展示，当变量较多时，可通过相关系数矩阵展示，相关系数图就是相关系数矩阵的可视化。  
+
+相关系数矩阵（correlation matrix）也叫相关矩阵，是由矩阵各列间的相关系数构成的。也就是说，相关矩阵第 i行第 j列的元素是原矩阵第i列和第j列的相关系数。如果一个数据集有P个相关变量，求两变量之间的相关系数，共可得到 $C^2_p = P(P-1)/2$个相关系数。如按变量的编号顺序，依次将它们排列成一数字方阵，此方阵就称为相关矩阵。常用字母 R表示。 
+$$R_{P\times P} = 
+\left[
+\begin{matrix}
+r_{11}&r_{12}&\cdots&r_{1p} \\ 
+r_{21}&r_{22}&\cdots&r_{2p}\\
+\vdots&\vdots&&\vdots\\ 
+r_{p1}& r_{p2}&\cdots&r_{pp}
+\end{matrix}\right ]$$  
+
+从左上到右下方向的对角线上，均是两个相同变量的相关，其数值均是 1，对角线以上部分的相关系数与以下部分的相关系数是对称的。  
+
+相关系数矩阵图主要包括热力图、气泡图或方块图、椭圆图。  
+
+热力图：将一个网格矩阵映射到指定的颜色序列上，恰当地选取颜色来展示数据。  
+所有的数据都在－1到1之间，正负号表示正相关和负相关，红色表示正相关系数，蓝色表示负相关系数。  
+热图适用于显示多个变量之间的差异；显示当中任何模式；显示是否有彼此相似的变量；以及检测彼此之间是否存在任何相关性。  
+
+气泡图：将一个网格矩阵映射到气泡的面积大小和颜色序列上。  
+气泡图使用三个值来确定每个数据序列，其中 X轴和Y轴分别代表不同的两个维度的数据，气泡的面积代表第三个维度的数据，即相关矩阵的绝对值大小；  
+红色表示正相关系数，蓝色表示负相关系数。也可以将圆圈换成方块；  
+
+椭圆图：利用椭圆的形状来表示相关系数：离心率越大，椭圆越扁，对应绝对值
+较大的相关系数；离心率越小，椭圆越圆，对应绝对值较小的相关系数。
+
+### 8.2.2 绘制相关关系图  
+
+1、ggplot2
+绘制热图
+
+```{r}
+library(RColorBrewer) # 调用RColorBrewer包。
+data2 <- mtcars[5:8] # 选取mtcars数据集5到8列数据为例。
+data2_cor <- round(cor(data2), 1) # 求算data2数据集相关系数。
+library(reshape2) # 调用reshape2包。
+mydata <- melt(data2_cor) # 相关系数矩阵转长数据格式。
+colnames(mydata) <- c("Var1", "Var2", "value") # 定义mydata数据集列名。
+ggplot(mydata, aes(x = Var1, y = Var2, fill = value, label = value)) +
+  geom_tile(colour = "black") +
+  geom_text(size = 3, colour = "white") +
+  coord_equal() +
+  scale_fill_gradientn(colours = c(brewer.pal(7, "Set1")[2], "white", brewer.pal(7, "Set1")[1]), na.value = NA) # 绘制相关系数图。
+```
+
+绘制气泡图
+
+```{r}
+mydata$AbsValue <- abs(mydata$value)
+ggplot(mydata, aes(x = Var1, y = Var2)) +
+  geom_point(aes(size = AbsValue, fill = value), shape = 21, colour = "black") +
+  scale_fill_gradientn(colours = c(brewer.pal(7, "Set1")[2], "white", brewer.pal(7, "Set1")[1]), na.value = NA) +
+  scale_size_area(max_size = 12, guide = "none") # 绘制气泡相关系数图。
+```
+
+2、corrplot包  
+```{r}
+library(corrplot) # 调用corrplot包。
+corrplot.mixed(data2_cor) # 绘制相关系数图。默认为圆形。
+corrplot(data2_cor, method = "ellipse", type = "upper") # 椭圆图。
+corrplot(data2_cor, method = "square", type = "upper") # 方块图。
+corrplot(data2_cor, method = "color", type = "upper") # 颜色填充。
+corrplot(data2_cor, method = "number", type = "upper") # 数值。
+```
+
+3、performanceAnalytics包   
+```{r}
+library(PerformanceAnalytics) # 调用PerformanceAnalytics包。
+chart.Correlation(data2, histogram = TRUE, pch = 15) # 绘制相关系数图。
+```
+
+4、GGally包
+```{r}
+library(GGally) # 调用GGally包。
+ggpairs(data2) # 相关系数图。
+ggpairs(df, columns = 5:9, ggplot2::aes(colour = nitrogen)) # 按分组绘制相关系数图。
+ggcorr(df[5:9], method = c("everything", "pearson")) # ggcorr函数绘制相关系数图。
+```
+
+5、corrgram包  
+```{r}
+library(corrgram) # 调用corrgram包。
+corrgram(data2) # 基本相关系数图。
+corrgram(data2, lower.panel = panel.shade, upper.panel = panel.pie) # 基本相关系数图。
+```
+*默认地，蓝色和从左下指向右上的斜杠表示单元格中的两个变量呈正相关。反过来，红色和从左上指向右下的斜杠表示变量呈负相关。色彩越深，饱和度越高，说明变量相关性越大。相关性接近于0的单元格基本无色*
+
+## 8.3 条形图(Bar Chart)  
+
+### 8.3.1 认识条形图  
+
+条形图(Bar Chart)也叫柱状图，棒形图，是最常用的数据可视化方法之一，通常采用水平或垂直条形（柱形图）来比较不同类别(在x轴上)的数值型变量的数值(在y轴上)。有时条形图的条形高度表示的是数据集变量的频数，有时则表示变量取值本身。  
+条形图作用：用于显示一段时间内的数据变化或显示各项之间的比较情况。    
+常见类型：单数据系列柱形图、多数据系列柱形图、堆积柱形图、百分比堆积柱形图。  
+
+### 8.3.2 绘制条形图
+
+ggplot中绘制条形图是使用geom_bar()函数，其中的position的参数有4种。  
+（1）identity：不做任何位置调整，该情况在多分类柱形图中不可行，序列间会遮盖，但是在多序列散点图、折线图中即可行，不存在遮盖问题；   
+（2）stack：垂直堆叠放置（堆积柱形图）；   
+（3）dodge：水平抖动放置（簇状柱形图，position=position_dodge()）；   
+（4）fill：百分比化（垂直堆叠放置，如百分比堆积面积图、百分比堆积柱形图等）。   
+
+1、单数据系列条形图  
+条形图X轴变量一般为类别型和序数型，Y轴变量为数值型。  
+R的 ggplot2包绘制柱形图时，X轴变量默认会按照输入的数据顺序绘制，Y轴变量和图例变量默认按照字母顺序绘制。  
+
+```{r}
+data3 <- tibble(Ax = c(1:5, 8), By = 6:11, cg = rep(c("a", "b"), each = 3)) # 创建数据集data3。
+ggplot(data3, aes(x = Ax, y = By)) +
+  geom_bar(stat = "identity") # 序数型x轴条形图。
+ggplot(data3, aes(x = factor(Ax), y = By)) +
+  geom_bar(stat = "identity") # 类别型x轴条形图。
+```
+*注：前一幅图x为序数型，后一幅图x为类别型*
+
+2、多数据系列条形图  
+将分类变量映射到fill参数，并运行geom_bar(position = "dodge")，注意，映射填充色的变量必须为分类变量。      
+
+```{r}
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1, fill = variety)) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.7)) # 簇状条形图。
+```
+
+3、堆积条形图    
+堆积条形图显示单个项目与整体之间的关系，它比较各个类别的每个数值所占总数值的大小。堆积柱形图以二维垂直堆积矩形显示数值。  
+```{r}
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1, fill = variety)) +
+  geom_bar(stat = "identity", width = 0.4, position = "stack") # 堆积条形图。
+```
+
+4、百分比堆积条形图  
+百分比堆积柱形图以二维垂直百分比堆积矩形显示数值。用于比较各个类别的数值所占总数值的百分比大小。  
+```{r}
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1, fill = variety)) +
+  geom_bar(stat = "identity", width = 0.4, position = "fill") # 百分比堆积条形图。
+```
+
+### 8.3.3 条形图相关操作  
+1、条形宽度和间距调整
+geom_bar()函数中width调整条形宽度，默认值为0.9，取值范围0-1；  
+簇状条形图默认组内条形间距为0，要调整组内条形间距可将width设定小一些，并令position_dodge()的取值大于width。  
+```{r}
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1)) +
+  geom_bar(stat = "identity") # 默认的是0.9。
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1)) +
+  geom_bar(stat = "identity", width = 0.5) # width调整为0.5。
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1, fill = nitrogen)) +
+  geom_bar(stat = "identity", width = 1) # width取值最大只能是1。
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1, fill = variety)) +
+  geom_bar(stat = "identity", position = "dodge") # 分组柱状图，position=position_dodge()默认参数是0.9。
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1, fill = variety)) +
+  geom_bar(stat = "identity", width = 0.5, position = position_dodge(0.7)) # 同时设定width和position_dodge()调整组内间距。
+```
+
+2、x轴分组顺序调整  
+对于 X轴变量为类别型的数据，使用ggplot2包绘图时，会默认将X轴类别按照字母顺序绘制柱形。一般推荐对数据进行降序处理后，再展示图表，这样，更加方便观察数据规律，确定某个类别对应的数值在整个数据范围的位置。  
+scale_x_discrete()函数中的limits参数可调整分类变量顺序。  
+```{r}
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1)) +
+  geom_bar(stat = "identity") # 基础图。
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1)) +
+  geom_bar(stat = "identity") +
+  scale_x_discrete(limits = c("N2", "N4", "N1", "N3")) # 调整分组顺序。
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1)) +
+  geom_bar(stat = "identity") +
+  scale_x_discrete(limits = rev(levels(factor(data1$nitrogen)))) # 反转因子顺序。
+```
+
+3、数据标签添加  
+geom_text()函数可映射要添加的数据标签。  
+
+```{r}
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = v1)) # 添加数据标签。
+```
+
+为什么会出现重叠，因为我的数据没有进行统计。不是用均值进行绘图的。  
+```{r}
+data1 %>%
+  group_by(nitrogen) %>%
+  summarise(mean_v1 = mean(v1), sd_v1 = sd(v1)) %>%
+  ggplot(aes(x = nitrogen, y = mean_v1)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = round(mean_v1, 2)), vjust = -0.5) # 添加数据标签。
+```
+
+4、x和y轴互换
+coord_flip()函数用于反转坐标轴。  
+```{r}
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1)) +
+  geom_bar(stat = "identity") # 基础图。
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1)) +
+  geom_bar(stat = "identity") +
+  coord_flip() # 翻转坐标轴。
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_x_discrete(limits = rev(levels(factor(data1$nitrogen)))) # 翻转坐标轴并翻转因子顺序。
+```
+
+5、刻度位置调整  
+标度函数scale_y_continuous()中的breaks用于调整刻度线位置。  
+ggplot柱形图纵坐标起始不是从0开始的，即x轴与图柱之间有间隙，可在 scale_y_continuous()中调整expand参数。
+要调整y轴范围，可通过ylim()实现，也可以在scale_y_continuous()中设定limits参数。
+```{r}
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1)) +
+  geom_bar(stat = "identity") # 基础图。y轴刻度0到15，间隔单位5。
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1)) +
+  geom_bar(stat = "identity") +
+  scale_y_continuous(breaks = c(0, 5, 8, 10, 12, 15, 18)) # 调整为自定义刻度。
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1)) +
+  geom_bar(stat = "identity") +
+  scale_y_continuous(expand = c(0, 0)) # 调整y轴从0开始，去除与x轴的间隙。
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1)) +
+  geom_bar(stat = "identity") +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.8)) # 开始，去除与x轴的间隙。
+data1 %>%
+  ggplot(aes(x = nitrogen, y = v1)) +
+  geom_bar(stat = "identity") +
+  ylim(0, 2) # 设置y阈值为0-2。
+```
+
+6、添加误差线  
+geom_errorbar()函数将变量映射到ymin和ymax的值即可。  
+```{r}
+data1 %>%
+  group_by(nitrogen) %>%
+  summarise(mean_v1 = mean(v1), sd_v1 = sd(v1)) %>%
+  ggplot(aes(x = nitrogen, y = mean_v1)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = mean_v1 - sd_v1, ymax = mean_v1 + sd_v1), width = 0.2)
+```
+
+7、添加显著性结果
+假设我已经对数据data1进行了单因素方差分析，经分析四个氮水平的差异显著性用字母标注是c,ab,b,a。   
+```{r}
+data1 %>%
+  group_by(nitrogen) %>%
+  summarise(mean_v1 = mean(v1), sd_v1 = sd(v1)) %>%
+  ggplot(aes(x = nitrogen, y = mean_v1)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = mean_v1 - sd_v1, ymax = mean_v1 + sd_v1), width = 0.2) +
+  geom_text(aes(x = nitrogen, y = mean_v1 + sd_v1 + 0.2, label = c("c", "ab", "b", "a")), size = 3, fontface = "bold")
+```
+
+ggpubr包添加显著性标识  
+```{r}
+library(ggpubr) # 调用ggpubr包。
+compare_means(v1 ~ nitrogen, data = data1, method = "t.test") # 先根据分组进行t检验。
+data1 %>%
+    ggplot(aes(x = nitrogen, y = v1)) +
+    geom_bar(stat = "identity") + 
+  stat_compare_means(comparisons = list(c("N1", "N2"), 
+                                        c("N2", "N3"), 
+                                        c("N3", "N4")), 
+                     method = "t.test", 
+                     label = "p.format", 
+                     label.y = c(15, 17, 19))  # 根据检验结果添加显著性结果。
+```
+
+
+### 8.3.4 条形图扩展  
+
+1、不等宽柱状图(variable width column chart)     
+不等宽柱形图是常规柱形图的一种变化形式，它用柱形的高度反映一个数值的大小，同时用柱形的宽度反映另一个数值的大小，多用于市场调查研究、维度分析等方面。[<sup>39</sup>](#refer-anchor)   
+geom_rect()函数可以根据右下角坐标（xmin,ymin）和左上角坐标（xmax,ymax）绘制矩形，矩形的宽度（width）为max-xmin对应X轴变量的数值大小；矩形的高度（height）为ymax-ymin对应Y轴变量的数值大小。  
+
+```{r}
+data3 <- tibble(Ax = c(1:5, 8), By = 6:11, cg = rep(c("a", "b"), each = 3)) # 创建数据集data3。
+data4 <- data3 %>%
+  mutate(xmax = cumsum(Ax)) %>%
+  mutate(xmin = xmax - Ax) %>%
+  mutate(label = (xmin + xmax) / 2) # 构建数据集data4.
+ggplot(data4) +
+  geom_rect(aes(xmin = xmin, xmax = xmax, ymin = 0, ymax = By, fill = cg), colour = "black", size = 0.25) +
+  geom_text(aes(x = label, y = By, label = By), vjust = -0.5, colour = "blue") + geom_text(aes(x = label, y = 0, label = cg), vjust = 1) +
+  theme_bw()
+```
+
+2、南丁格尔玫瑰图  
+南丁格尔玫瑰图（Nightingale rose chart，也被称为coxcomb chart、polar area diagram）即极坐标柱形图，是一种圆形的柱形图。
+普通柱状图分布在直角坐标系，使用y坐标轴对于的数值表示数据的大小；南丁格尔玫瑰图分布在极坐标系，使用圆弧的半径长短表示数据的大小（数量的多少），每个数据类别或间隔在径向图上划分为相等分段，每个分
+段从中心延伸多远（与其所代表的数值成正比）取决于极坐标轴线。因此，从极坐标中心延伸出来的每一环可以当作标尺使用，用来表示分段大小并代表较高的数值。[<sup>35,40</sup>](#refer-anchor)   
+
+```{r}
+data1 %>% ggplot(aes(x = nitrogen, y = v1, fill = nitrogen)) +
+  geom_bar(stat = "identity", width = 0.4, 
+           position = position_dodge(width = 0.7)) +
+  coord_polar(theta = "x", start = 0) # 南丁格尔玫瑰图。
+```
+
+
+3、径向柱形图(circular barplot)  
+径向柱形图也被称为圆形柱形图或星图。  
+每个圆圈表示一个数值刻度，而径向分隔线（从中心延伸出来的线）则用作区分不同类别或间隔（如果是直方图）。  
+通常，标尺上的较低值从中心开始，并随每个圆圈增加。但是，也可以在径向柱形图上显示负值，方法是从任何一个外部圆（从中心一个圆）开始为零，并且将其中的所有圆用作负值。  
+条形图通常从中心开始并向外延伸，但是可以用可变的起点来显示范围。
+
+```{r}
+data1 %>% ggplot(aes(x = nitrogen, y = v1)) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.7)) +
+  coord_polar() +
+  ylim(c(-1, 2)) +
+  theme_light()
+```
+
+
+4、棒棒糖图(lollipop chart)  
+棒棒糖图传达了与柱形图或者条形图相同的信息，只是将矩形转变成线条，这样可减少展示空间，重点放在数据点上，从而看起来更加简洁、美观。相对柱形图与条形图，棒棒糖图更加适合数据量比较多的情况。  
+
+```{r}
+ggplot(data2, aes(wt, rownames(data2))) + 
+  geom_point(shape = 21, size = 3, fill = "red") +
+  geom_segment(aes(x = 0, 
+                   xend = wt, 
+                   y = rownames(data2), 
+                   yend = rownames(data2)), 
+               colour = "blue") + 
+  theme_bw() + 
+  labs(x = "Weight of cars(t)", y = "Brand of cars") # 棒棒糖图。
+```
+
+
+5、克利夫兰点图(Cleveland's dot plot)
+克利夫兰点图（Cleveland's dot plot）：也就是我们常用的滑珠散点图，非常类似棒棒糖图，只是没有连接的线条，重点强调数据的排序展示及互相之间的差距。  
+
+```{r}
+ggplot(data2, aes(wt, rownames(data2))) + 
+  geom_point(shape = 21, size = 3, fill = "black") + 
+  theme_bw() + 
+  labs(x = "Weight of cars(t)", y = "Brand of cars")
+```
+
+
+6、哑铃图(dumbbell plot)  
+可以看成多数据系列的克利夫兰点图，只是使用直线连接了两个数据系列的数据点。[<sup>41</sup>](#refer-anchor)    
+哑铃图主要用于：  
+①展示在同一时间段两个数据点的相对位置（增加或者减少）；  
+②比较两个类别之间的数据值差别。  
+
+```{r}
+data1 %>% 
+  select(nitrogen, variety, v1) %>% 
+  group_by(nitrogen, variety) %>% 
+  summarise(v1_mean = mean(v1)) %>% 
+  ggplot(aes(x = v1_mean, y = nitrogen, fill = variety)) + geom_point(aes(colour = variety), size =4) + 
+  geom_line(aes(group = nitrogen)) # 哑铃图。
+```
+
+
+## 8.4 箱形图(box plot)  
+
+### 8.4.1 绘制箱形图  
+1、认识箱形图  
+箱形图(box plot)也称箱须图(box-whisker plot)、箱线图、盒图，能显示出一组数据的最大值、最小值、中位数，以及上下四分位数，可以用来反映一组或多组连续型定量数据分布的中心位置和散布范围。  
+箱形图箱体范围是从数据的下四分位数到上四分位数，也就是常说的四分位距(IQR)，箱子中间的线表示中位数(50%分位数线)；从箱子两端延伸出来的线条称为“晶须”(whisker)，表示上、下四分位数以外的变量，即从箱子边缘出发延申至1.5倍四分位距内的最远的点。超过晶须的数据点被视为异常值(outlier)。有时会以与晶须处于同一水平的单一数据点表示。  
+![](D:/Rwd/Tidyverse study note/8.4.1.png)  
+
+四分位数(quartile)是指在统计学中把所有数值由小到大排列并分成四等份，处于三个分割点位置的数值。分位数是将总体的全部数据按大小顺序排列后，处于各等分位置的变量值。如果将全部数据分成相等的两部分，它就是中位数；如果分成四等分，就是四分位数；八等分就是八分位数等。   
+第一个四分位数(Q1)，又称“下四分位数”，等于该样本中所有数值由小到大排列后第25%的数字。 
+第二个四分位数(Q2)，又称“中位数”，等于该样本中所有数值由小到大排列后第 50%的数字。 
+第三个四分位数(Q3)，又称“上四分位数”，等于该样本中所有数值由小到大排列后第75%的数字。 
+第三个四分位数与第一个四分位数的差距又被称为四分位距(Inter Quartile Range，IQR)，是上四分位值 Q3与下四分位值 Q1之间的差，即 IQR=Q3-Q1。IQR乘以因子 0.7413得到标准化四分位距（Norm IQR），它是稳健统计技术处理中用于表示数据分散程度的一个量，其值相当于正态分布中的标准偏差（SD）。  
+箱形图重要功能是识别异常值，识别标准：异常值被定义为小于Q1－1.5IQR或大于Q3＋1.5IQR的值。 
+2、绘制箱形图  
+基本箱形图绘制。  
+```{r}
+data1 %>% ggplot(aes(x = nitrogen, y = v1)) + 
+  geom_boxplot(aes(fill = nitrogen))  # 简单箱形图绘制。
+```
+
+箱形图参数调节  
+width指定箱体宽度，outlier系列参数colour指定颜色，size指定大小，shape指定形状。  
+notch = TRUE用于添加槽口，槽口用于查看不同分布的中位数是否有差异，如果各箱形图的槽口互不重合，说明各中位数有差异。   
+varwidth用于指定数据集宽度。
+```{r}
+data1 %>% ggplot(aes(x = nitrogen, y = v1)) + 
+  geom_boxplot(width = 0.5, outlier.colour = "red", outlier.size = 3, outlier.shape = 5) # width调节箱体宽度，outlier系列参数colour指定颜色，size指定大小，shape指定形状。
+data1 %>% ggplot(aes(x = nitrogen, y = v1)) + 
+  geom_boxplot(aes(fill = nitrogen), notch = TRUE, varwidth = TRUE) + 
+  geom_jitter(aes(colour = nitrogen)) # 可变宽度带凹槽箱形图绘制。这里我的分组数据长度一样，所以varwidth显示等宽。
+data1 %>% ggplot(aes(x = nitrogen, y = v1)) + 
+  geom_boxplot(aes(fill = nitrogen)) + 
+  stat_summary(fun.y = "mean", geom = "point", shape = 23, size = 3, fill = "white") # 箱线图添加均值。
+```
+
+给箱形图添加显著性。  
+```{r}
+library(ggpubr)
+library(ggplot2)
+data1$nitrogen <- as.factor(data1$nitrogen)
+ggplot(data1, aes(x = nitrogen, y = v1)) + 
+  geom_boxplot() + 
+  stat_compare_means(aes(label = ..p.signif..), 
+                     comparisons = list(c('N1','N2'),
+                                        c('N2','N3'), 
+                                        c('N3','N4')), 
+                     method = "t.test", 
+                     label = "p.format") # 箱形图添加显著性标识。
+```
+
+分组箱形图  
+```{r}
+data1 %>% ggplot(aes(x = nitrogen, y = v1)) + 
+  geom_boxplot(aes(fill = variety)) # 按品种多分组的箱形图。
+data1 %>% ggplot(aes(x = nitrogen, y = v1)) + 
+  geom_boxplot(aes(fill = variety)) + 
+  stat_compare_means(aes(group = variety), 
+                     method = "t.test", 
+                     label = "p.signif") # 多分组箱形图绘制并添加显著性。
+```
+
+
+## 8.5 数据分布型图(Data distribution chart)
+
+### 8.5.1 频数直方图(histogram)   
+
+**认识频数直方图**  
+频数直方图是用于表示数据分布情况的常见统计图，一般用横轴表示数据区间，纵轴表示分布情况，柱子越高，则落在该区间的数量越大。根据数据分布状况不同，直方图展示的数据有不同的模式，包括对称单峰、偏左单峰、偏右单峰、双峰、多峰以及对称多峰。[<sup>42</sup>](#refer-anchor)   
+
+频数直方图的基本参数：  
+（1）组数：在统计数据时，我们把数据按照不同的范围分成几个组，组的个数称为组数。   
+（2）组距：每一组两个端点的差。   
+（3）频数：分组内的数据元的数量除以组距。
+
+频数直方图统计过程：  
+首先要从数据中找出它的最大值和最小值，然后确定一个区间，使其包含全部测量数据，将区间分成若干小区间，统计测量结果出现在各小区间的频数M，以测量数据为横坐标，以频数M为纵坐标，划出各小区间及其对应的频数。在平面直角坐标系中，横轴标出每个组的端点，纵轴表示频数，每个矩形的高代表对应的频数，我们也称这样的统计直方图为频数分布直方图。  
+
+频数直方图的作用：  
+- 能够显示各组频数或数量分布的情况。 
+- 易于显示各组之间频数或数量的差别。通过统计直方图还可以观察和估计哪些数据比较集中，异常或者孤立的数据分布在何处。  
+
+**绘制频数直方图**  
+在ggplot2中绘制频数直方图的函数是geom_histogram和qplot，默认情况下，数据被分为30组，可通过参数binwidth调节组距，bins改变分组数。  
+
+```{r}
+data1 %>% ggplot(aes(x = v1)) +
+  geom_histogram() # 简单频数直方图。
+qplot(data1$v1) # 这等价于上面的geom_histogram。
+data1 %>% ggplot(aes(x = v1)) +
+  geom_histogram(bins = 60) # 组数调节，ggplot2默认组数为30。
+data1 %>% ggplot(aes(x = v1)) +
+  geom_histogram(binwidth = 0.1) # 组距调节，binwidth用于调节组距。
+data1 %>% ggplot(aes(x = v1)) +
+  geom_histogram(binwidth = 0.01) # 组距调节，binwidth用于调节组距。
+data1 %>% ggplot(aes(x = v1)) + 
+  geom_histogram(fill = "white", colour = "black") # 改变填充色和边框色。
+data1 %>% ggplot(aes(x = v1)) + 
+  geom_histogram(fill = "white", colour = "black", binwidth = 0.01) # 改变填充色和边框色。
+data1 %>% ggplot(aes(x = v1)) + 
+  geom_histogram(fill = "white", colour = "black", binwidth = 0.01) + 
+  facet_wrap(~ nitrogen) # 多组数据分面直方图绘制。
+data1 %>% ggplot(aes(x = v1, fill = nitrogen)) + 
+  geom_histogram(position = "identity", colour = "black", binwidth = 0.01) # 多分组映射直方图。
+```
+
+
+### 8.5.2 密度图(density plot)  
+**认识密度图**  
+核密度估计图（kernel density plot）用于显示数据在X轴连续数据段内的分布状况。表是直方图的变种，使用平滑曲线来绘制水平数值，从而得出更平滑的分布。核密度估计图比直方图优胜的地方是，它们不受所使用分组数量的影响，所以能更好地界定分布形状。  
+密度图的峰值显示数值在该时间段内最为高度集中的位置。    
+带宽：核密度图是基于样本数据对总体分布做出的一个估计；带宽越大，曲线越光滑，不同带宽得到的估计结果是有差别的。
+**基本密度图**  
+在ggplot2中，只要运行geom_density()函数，并映射一个连续型变量到x就可生成密度图。   
+adjust可用于调节带宽，默认值为1。   
+  
+```{r}
+data1 %>% 
+  ggplot(aes(x = v1)) + 
+  geom_density() # 基本密度图。
+data1 %>% 
+  ggplot(aes(x = v1)) + 
+  geom_density(adjust = 0.5) # 调节带宽。
+data1 %>% 
+  ggplot(aes(x = v1)) + 
+  geom_density(fill = "yellow", alpha = 0.8) # 填充颜色。
+data1 %>% 
+  ggplot(aes(x = v1)) + 
+  geom_histogram(fill = "cornsilk", colour = "black") + 
+  geom_density() # 直方图核密度图叠加。
+```
+
+**分组密度图**   
+只需将分组变量映射给colour或fill等图形属性即可。分组变量必须为因子型或字符串向量。   
+另一种分组密度图的方法是使用分面。此时要设置y=after_stat(density)参数，其作用是将直方图的y轴标度降到跟密度曲线相同。
+
+```{r}
+data1 %>% 
+  ggplot(aes(x = v1, fill = nitrogen)) + 
+  geom_density() # 分组密度图。
+data1 %>% 
+  ggplot(aes(x = v1, fill = nitrogen)) + 
+  geom_density(alpha = 0.4) # 调节透明度。
+data1 %>% 
+  ggplot(aes(x = v1, fill = nitrogen)) + 
+  geom_density() + 
+  facet_wrap(~nitrogen) # 分面显示分组密度图。
+data1 %>% 
+  ggplot(aes(x = v1, y = after_stat(density))) + 
+  geom_histogram(fill = "cornsilk", colour = "black") + 
+  geom_density() + 
+  facet_wrap(~nitrogen) # 基于分面的直方图核密度图叠加。
+```
+
+
+**散点图和直方图或密度图的组合**   
+ggpubr包中的ggscatterhist函数。  
+```{r}
+library(ggpubr) # 调用ggpubr包。
+ggscatterhist(data1, x = "v1", y = "v2", 
+              shape = 21, 
+              colour = "black", 
+              fill = "nitrogen", 
+              size = 4, 
+              alpha = 0.6, 
+              margin.plot = "density", 
+              margin.params = list(fill = "nitrogen"), 
+              ggtheme = theme_minimal()) # 散点图和密度图组合。
+```
+
+
+## 8.6 折线图(line chart)   
+### 8.6.1 认识折线图   
+
+折线图用于在连续间隔或时间跨度上显示定量数值，最常用来显示趋势和关系（与其他折线组合起来）。    
+折线图通常用于展示两个连续变量之间的依存关系，要绘制折线图，先在笛卡尔座标上定出数据点，然后用直线把这些点连接起来。在折线图中，X轴包括类别型或者序数型变量，分别对应文本坐标轴和序数坐标轴（如日期坐标轴）两种类型；Y轴为数值型变量。折线图主要应用于时间序列数据的可视化。负值可以显示在 X 轴下方。  
+
+### 8.6.2 绘制折线图
+```{r}
+data1 %>% 
+  ggplot(aes(x = v1, y = v2)) + 
+  geom_line() # 基本折线图。
+data1 %>% 
+  ggplot(aes(x = v1, y = v2)) + 
+  geom_line(linetype = "dashed", size = 1, colour = "red") # 线参数调节。
+data1 %>% 
+  ggplot(aes(x = v1, y = v2)) + 
+  geom_line() + geom_point() # 添加数据标记，点线图。
+data1 %>% 
+  ggplot(aes(x = v1, y = v2)) + 
+  geom_line() + geom_point(shape = 21, size = 5, fill = "red") # 数据标记参数调节。
+data1 %>% 
+  ggplot(aes(x = v1, y = v2, colour = nitrogen)) + 
+  geom_line() + geom_point() # 分组点线图。颜色映射给分组。
+data1 %>% 
+  ggplot(aes(x = v1, y = v2, colour = nitrogen, linetype = nitrogen)) + 
+  geom_line() + geom_point() # 分组点线图。颜色和线型均映射给分组。
+data1 %>% 
+  ggplot(aes(x = v1, y = v2, shape = nitrogen, colour = nitrogen)) + 
+  geom_line() + geom_point() # 数据标记形状映射给分组。
+data1 %>% 
+  ggplot(aes(x = v1, y = v2, colour = nitrogen)) + 
+  geom_line() + geom_ribbon(aes(ymin = v2 - 0.1, ymax = v2 + 0.1), alpha = 0.3) # 给线添加置信域，这里的置信域是我自定义的。
+```
+
+
+面积图（area graph）又叫区域图，是在折线图的基础之上形成的，它将折线图中的折线与自变
+量坐标轴之间的区域使用颜色或者纹理填充（填充区域称为“面积”），这样可以更好地突出趋势信息，同时让图表更加美观。跟折线图一样，面积图可显示某时间段内量化数值的变化和发展，最常用来显示趋势，而非表示具体数值。   
+面积图可分为普通面积图，堆积面积图，百分比堆积面积图三类。[<sup>43</sup>](#refer-anchor)  
+普通面积图：显示各种数值随时间或类别变化的趋势线。  
+堆积面积图：显示每个数值所占大小随时间或类别变化的趋势线。可强调某个类别交于系列轴上的数值的趋势线。  
+百分比堆积面积图:显示每个数值所占百分比随时间或类别变化的趋势线。可强调每个系列的比例趋势线。    
+
+下面用R内置数据集airquality为例绘制面积图，airquality数据集记录了纽约1973年5-9月每日空气质量。   
+
+```{r}
+data5 <- airquality # 提取数据集。
+head(data5) # 查看数据集。
+glimpse(data5) # 查看数据结构。
+data5 %>% 
+  ggplot(aes(x = Day, y = Temp)) + 
+  geom_area() # 普通面积图。
+data5 %>% 
+  ggplot(aes(x = Day, y = Temp, fill = factor(Month))) + 
+  geom_area() # 堆积面积图。
+data5 %>% 
+  ggplot(aes(x = Day, y = Temp, fill = factor(Month))) + 
+  geom_area(colour = "black", linewidth = 0.2, alpha = 0.4) # 堆积面积图区域间添加细线，并将填充区域透明度调低。
+data5.1 <- data5 %>% group_by(Day, Month) %>% summarise(Tempmean = mean(Temp)) %>% mutate(Temppercent = Tempmean/sum(Tempmean)*100) # 求算Temp百分比。
+data5.1 %>% 
+   ggplot(aes(x = Day, y = Temppercent, fill = factor(Month))) + 
+   geom_area(position = "fill") # 绘制百分比面积图。
+```
+
+## 8.7 饼图(pie chart)  
+饼图（pie chart）将一个圆饼按照分类的占比划分成多个切片，整个圆饼代表数据的总量，每个切片（圆弧）表示该分类占总体的比例，所有切片（圆弧）的加和等于 100%。   
+
+**基础包pie()函数绘制饼图**   
+```{r}
+data5.2 <- data1 %>% group_by(nitrogen) %>% summarise(v2mean = mean(v2)) %>% mutate(per = v2mean/sum(v2mean)*100) # 通过data1构建新数据集data5.2。
+data5.2 # 查看新数据集data5.2
+pie(data5.2$per, labels = round(data5.2$per, 2), main = "Nitrogen pie chart", col = c("red","orange","yellow","green")) # 基础包函数pie绘制饼图。
+```
+
+**ggplot2绘制饼图**    
+使用ggplot2包的geom_bar()函数绘制堆积柱形图，然后将直角坐标系转换成极坐标系，就可以显示为饼图，使用geom_text()函数添加数据标签。  
+
+```{r}
+data5.2 %>% ggplot(aes(x = " ", y = per, fill = nitrogen)) + geom_bar(stat = "identity", width = 1) # 绘制柱状图。
+data5.2 %>% 
+  ggplot(aes(x = " ", y = per, fill = nitrogen)) + 
+  geom_bar(stat = "identity", width = 1) + 
+  coord_polar("y", start = 0) + 
+  theme(axis.title.x = element_blank(), 
+        axis.text.x = element_blank(), 
+        axis.ticks = element_blank(), 
+        axis.title.y = element_blank(), 
+        panel.background = element_blank()) + 
+  geom_text(aes(label = paste0(round(per, 2), "%")), 
+            position = position_stack(0.5)) # 绘制饼图
+```
+
+**甜甜圈图**   
+
+圆环图(又叫甜甜圈图，donut chart)，其本质是将饼图的中间区域挖空。饼图整体性太强，如果我们将两个饼图放在一起，通过比较饼图内各个扇形之间占整体比重的关系，很难同时对比两个图。圆环图则通过关注长度而不是面积解决了饼图对比困难的问题。  
+
+```{r}
+data5.2 %>% 
+  ggplot(aes(x = 3, y = per, fill = nitrogen)) + 
+  geom_bar(stat = "identity", width = 1) + coord_polar("y", start = 0) + 
+  xlim(c(0,4.5)) + 
+  geom_text(aes(label = paste0(round(per, 2), "%")), 
+            position = position_stack(0.5)) + 
+  theme(axis.title.x = element_blank(), 
+        axis.text.x = element_blank(), 
+        axis.ticks = element_blank(), 
+        axis.title.y = element_blank(), 
+        panel.background = element_blank(), 
+        axis.text.y = element_blank()) # 甜甜圈图。
+```
+
+
+**3D饼图**   
+使用plotrix包中的pie3D()函数可绘制3D饼图。  
+
+```{r}
+library(plotrix) # 调用plotrix包。
+pie3D(data5.2$per, 
+      labels = paste0(round(data5.2$per, 2), "%"), 
+      explode = 0.1, 
+      border = "white", 
+      main = "Nitrogen pie chart", 
+      height = 0.2, labelcex = 1,
+      col = c("red","orange","yellow","green")) # 绘制3D饼图。
+legend(0.75, 1, data5.2$nitrogen, fill = c("red","orange","yellow","green"), cex = 0.5) # 添加图例。
+```
+
+## 8.8 雷达图(radar chart)   
+又被称为蜘蛛图、极地图或星图。雷达图是用来比较多个定量变量的方法，可用于查看哪些变量具有相似数值，或者每个变量中有没有任何异常值。此外，雷达图也可用于查看数据集中哪些变量得分较高较低，是显示性能表现的理想之选。  
+每个变量都具有自己的轴（从中心开始）。所有的轴都以径向排列，彼此之间的距离相等，所有轴都有相同的刻度。轴与轴之间的网格线通常只是作为指引用途。每个变量数值会画在其所属轴线之上，数据集内的所有变量将连在一起形成一个多边形。
+
+```{r}
+data5.3 <- tibble(a = c(0,3,1.8,2.9), b = c(0,3,1.1,2.7), c = c(0,3,2.2,1.5), d = c(0,3,1.5,2.6), e = c(0,3,2.8,1.2), f = c(0,3,2.6,1.1)) # 构建示例数据。
+library(fmsb) # 调用fmsb包。
+radarchart(data5.3[1:3,]) # 绘制单组雷达图。
+radarchart(data5.3[1:3,], axistype = 1, pcol = "#00AFBB", cglcol = "black", pfcol = scales::alpha("purple", 0.6),axislabcol = "grey",vlabels = c("one","two","three","four","five","six")) # 参数调节。
+radarchart(data5.3) # 绘制双组雷达图。
+radarchart(data5.3, 
+           axistype = 1, 
+           pcol = c("red", "blue"), 
+           plwd = 2, 
+           plty = "dashed", 
+           cglcol = "black", 
+           pfcol = scales::alpha(c("red", "blue"), 0.6), 
+           axislabcol = "grey", 
+           vlabels = c("one","two","three","four","five","six")) # 参数调节。具体参数可查看帮助文档。
+```
+
+
+
+<font face="黑体" size = 8 color = brown><center>**第四部分 统计篇**</center></font>  
+
+# 10 统计基础知识  
+## 10.1 数据分类  
+1、定类数据  
+表现为类别，不区分顺序，是由分类尺度计量形成的。即将观察单位按照属性或分类分组，清点各组的观察单位数。如性别数、班级数、产品按合格和不合格进行计数等。定类数据只能计算频数，不能进行大小比较。    
+2、定序数据  
+表现为类别，但有顺序，由定序尺度计量形成。如产品按照一等品、二等品、三等品计数。  
+3、定距数据  
+表现为数值，可进行加减运算，由定距尺度计量形成。如身高、体重、收入等。  
+4、定比数据  
+表现为数值，可进行加减乘除运算，是由定比尺度计量形成。  
+
+定类和定序数据说明的是事物的品质特征，不能用数值表示，结果均表现为类别，因此被称为定性数据(Qualitative data)；而定距和定比数据说明的是现象的数量特征，可以用数值表示，因此被称为定量数据(Quantitative data)。  
+不同类型的数据将采用不同的统计方法来处理和分析。  
+
+# 11 常见统计分析方法  
+
+## 11.1 方差分析  
+
+
+## 11.2 相关分析  
+
+
+## 11.3 回归分析  
+
+
+
+<font face="黑体" size = 8 color = brown><center>**第六部分 应用篇**</center></font>
+
+
+# 参考资料
+
+1.  R语言编程---基于 tidyverse，人民邮电出版社（待出版），2022.
+2.  学习tidyverse（介绍），<https://www.jianshu.com/p/0cdff633bafb>  
+3.  Tidyverse，<https://www.tidyverse.org/packages/>  
+4.  R语言文件数据读入（readr包），<https://zhuanlan.zhihu.com/p/402685297>  
+5.  R package：readxl，<https://zhuanlan.zhihu.com/p/28356910>
+6.  《R数据科学》，人民邮电出版社，2018.  
+7.  用tidyr包进行长数据和宽数据的相互转换，<https://www.jianshu.com/p/46a53717d964>  
+8.  R语言中管道操作 %>%, %T>%, %$% 和%<>%，<https://blog.csdn.net/zhaozhn5/article/details/79001384>  
+9.  新的R语言管道符，<https://zhuanlan.zhihu.com/p/451590575>  
+10. R语言管道符（magrittr包），<https://blog.csdn.net/nixiang_888/article/details/105391568>  
+11. R语言教程，李东风，<https://www.math.pku.edu.cn/teachers/lidf/docs/Rbook/html/_Rbook/index.html>  
+12. R语言基础入门(3)select选择列的方法从基础到高级,<https://www.jianshu.com/p/416ba0a1a8e2>  
+13. R语言中 "apply" 函数详解，<https://cloud.tencent.com/developer/article/1815618>  
+14. R语言基础入门(5)rowwise按行进行数据处理，<https://www.jianshu.com/p/b8e97ab1e6e6>  
+15. 「R」dplyr 行式计算，<https://zhuanlan.zhihu.com/p/351320575>  
+16. R语言基础入门(11)summarise汇总数据，<https://www.jianshu.com/p/110d64b6c582>  
+17. R语言 subset()用法及代码示例，<https://vimsky.com/examples/usage/create-subsets-of-a-data-frame-in-r-programming-subset-function.html>  
+18. R语言 transform()用法及代码示例，<https://vimsky.com/examples/usage/modify-values-of-a-data-frame-in-r-language-transform-function.html>  
+19. R语言基础入门(6)slice根据索引按行操作数据，<https://www.jianshu.com/p/5f450bad5460>  
+20. R语言tidyverse包使用杂记：删除行、设置因子水平、指定列小写转大写，<https://cloud.tencent.com/developer/article/1888279>
+21. Tidyverse|tidyr数据重塑之gather，spread（长数据宽数据转化），<https://cloud.tencent.com/developer/article/1674169>  
+22. ggplot2高效实用指南，<https://www.jianshu.com/p/2dc81b91131e>
+23. ggplot2超详细讲解，<https://www.jianshu.com/p/07f7931a00db>
+24. ggplot保姆级教程-科研绘图细节调参，<https://zhuanlan.zhihu.com/p/391832351>
+25. 第 23 章 ggplot2之标度，王敏杰，<https://bookdown.org/wangminjie/R4DS/tidyverse-ggplot2-scales.html>
+26. R|ggplot2(三)|coord系列函数坐标轴转换，<https://zhuanlan.zhihu.com/p/29553382>
+27. ggplot2 | 注释函数ggplot2 | 注释函数，<https://zhuanlan.zhihu.com/p/404747239>
+28. ggplot2:用这种方式添加的参考线，你见过么？<https://www.jianshu.com/p/bd87a9ce58eb>
+29. 5.3 添加注释：添加直线,<https://blog.csdn.net/gavin_cdc/article/details/90716512>
+30. ggplot2 | 图例（Ⅰ）：图例函数、主题函数中的图例参数，<https://zhuanlan.zhihu.com/p/404747027>
+31. R|ggplot2(六)|套用主题模板，<https://zhuanlan.zhihu.com/p/29656775>
+32. ggplot2: 数据分析与图形艺术，西安交通大学出版社，2013.
+33. ggplot2 | 位置调整函数，<https://zhuanlan.zhihu.com/p/409489632>
+34. ggplot2绘图系统——位置调整函数，<https://www.cnblogs.com/jessepeng/p/12307794.html>
+35. R语言数据可视化之美：专业图表绘制指南，电子工业出版社，2019
+36. 关于位置调整(position adjustments)，<https://www.jianshu.com/p/23838a9d5470>
+37. 什么是散点图矩阵：散点图矩阵的优点缺点,<http://www.tjxzj.net/4509.html#:~:text=%E6%95%A3%E7%82%B9%E5%9B%BE%E7%9F%A9%E9%98%B5%E9%80%9A%E8%BF%87%E4%BA%8C,%E5%BE%8B%E6%8E%92%E5%88%97%E7%9A%84%E6%95%A3%E7%82%B9%E5%9B%BE%E3%80%82>
+38. 气泡图 - Bubble Chart,<http://www.tuzhidian.com/chart?id=5c56e2954a8c5e048189c6af>
+39. R语言绘制不等宽柱形图,<https://zhuanlan.zhihu.com/p/568303332>
+40. 数据可视化工具目录，<https://datavizcatalogue.com/ZH/>
+41. R语言作图-哑铃图，<https://cloud.tencent.com/developer/article/1802011>
+42. 图之典-直方图，<http://www.tuzhidian.com/chart?id=5c56e58b4a8c5e048189c736>
+43. 什么是面积图？面积图有什么作用？<https://zhuanlan.zhihu.com/p/87014671>
+44. Rmarkdown入门教程，<https://cosx.org/2021/04/rmarkdown-introduction/>
+45. Rmarkdown基础知识，<https://cosname.github.io/rmarkdown-guide/rmarkdown-base.html#install-rmarkdown>
+46.
+47.
+48.
+49.
+50.
